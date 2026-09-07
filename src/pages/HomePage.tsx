@@ -325,7 +325,7 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
                   Browse any category, add items to your bag, and proceed to checkout. We accept Visa, Mastercard, Amex, PayPal, Apple Pay, Google Pay, and Stripe. All transactions are processed instantly via PCI DSS Level 1 certified infrastructure.
                 </FaqItem>
                 <FaqItem q="Can I modify or cancel my order after placing it?">
-                  Orders can be modified or cancelled within 2 hours of placement by contacting hello@noir-studio.com. After fulfillment begins, our standard return policy applies.
+                  Orders can be modified or cancelled within 2 hours of placement by contacting hello@noir-fashion-store.com. After fulfillment begins, our standard return policy applies.
                 </FaqItem>
                 <FaqItem q="Do you offer instalment or Buy Now Pay Later options?">
                   Yes — we partner with Klarna and Affirm for eligible orders above £500. Select your preferred option at checkout. Terms are displayed transparently before confirmation.
@@ -399,7 +399,7 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
               For bespoke orders, press inquiries, or collaboration proposals. We respond within 24 hours.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {[["hello@noir-studio.com", "Email"], ["+33 1 42 86 00 00", "Phone"], ["12 Rue du Faubourg, Paris", "Studio"]].map(([val, label]) => (
+              {[["hello@noir-fashion-store.com", "Email"], ["+234 90 599 166 25", "Phone"], ["12 Rue du Faubourg, Paris", "Studio"]].map(([val, label]) => (
                 <div key={label} style={{ display: "flex", gap: "1rem", alignItems: "center", borderBottom: "1px solid var(--border-mid)", paddingBottom: "1rem" }}>
                   <span style={{ fontSize: "0.6rem", letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase", fontFamily: "'Inter', sans-serif", minWidth: 52 }}>{label}</span>
                   <span style={{ color: "var(--text)", fontFamily: "'Inter', sans-serif", fontSize: "0.85rem" }}>{val}</span>

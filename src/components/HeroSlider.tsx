@@ -49,7 +49,7 @@ export default function HeroSlider({ onShopNow }: HeroSliderProps) {
     setPrev(current);
     setAnimating(true);
     setCurrent(idx);
-    setTimeout(() => { setPrev(null); setAnimating(false); }, 800);
+    setTimeout(() => { setPrev(null); setAnimating(false); }, 1000);
   };
 
   const next = () => goTo((current + 1) % slides.length);
@@ -62,7 +62,7 @@ export default function HeroSlider({ onShopNow }: HeroSliderProps) {
         const n = (c + 1) % slides.length;
         setPrev(c);
         setAnimating(true);
-        setTimeout(() => { setPrev(null); setAnimating(false); }, 800);
+        setTimeout(() => { setPrev(null); setAnimating(false); }, 1000);
         return n;
       });
     }, 5500);
@@ -77,7 +77,7 @@ export default function HeroSlider({ onShopNow }: HeroSliderProps) {
         const n = (c + 1) % slides.length;
         setPrev(c);
         setAnimating(true);
-        setTimeout(() => { setPrev(null); setAnimating(false); }, 800);
+        setTimeout(() => { setPrev(null); setAnimating(false); }, 1000);
         return n;
       });
     }, 5500);
