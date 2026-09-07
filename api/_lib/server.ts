@@ -1,0 +1,190 @@
+import crypto from 'node:crypto';
+import Stripe from 'stripe';
+import { Resend } from 'resend';
+import { cert, getApps, initializeApp as initializeAdminApp } from 'firebase-admin/app';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { getFirestore as getAdminFirestore, FieldValue } from 'firebase-admin/firestore';
+import { products } from '../../src/data/products';
+
+const verificationCodes = new Map<string, { code: string; expiresAt: number }>();
+
+export function getServerEnv() {
+  return {
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || '',
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || '',
+    RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || '',
+    RESEND_CONTACT_TO_EMAIL: process.env.RESEND_CONTACT_TO_EMAIL || '',
+    FIREBASE_ADMIN_PROJECT_ID: process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || '',
+    FIREBASE_ADMIN_CLIENT_EMAIL: process.env.FIREBASE_ADMIN_CLIENT_EMAIL || '',
+    FIREBASE_ADMIN_PRIVATE_KEY: (process.env.FIREBASE_ADMIN_PRIVATE_KEY || '').replace(/\\n/g, '\n').trim(),
+    APP_URL: process.env.APP_URL || 'http://localhost:8443',
+  };
+}
+
+export function getFirebaseAdmin(env: Record<string, string>) {
+  const projectId = env.FIREBASE_ADMIN_PROJECT_ID?.trim();
+  const clientEmail = env.FIREBASE_ADMIN_CLIENT_EMAIL?.trim();
+  const privateKey = env.FIREBASE_ADMIN_PRIVATE_KEY?.trim();
+  if (!projectId || !clientEmail || !privateKey) return null;
+  const app = getApps()[0] || initializeAdminApp({ credential: cert({ projectId, clientEmail, privateKey }) });
+  return { auth: getAdminAuth(app), firestore: getAdminFirestore(app) };
+}
+
+export function readRawBody(req: any): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let raw = '';
+    req.setEncoding?.('utf8');
+    req.on('data', (chunk: any) => { raw += chunk; });
+    req.on('end', () => resolve(raw));
+    req.on('error', reject);
+  });
+}
+
+export function emailLayout(title: string, content: string): string {
+  return `<div style="background:#0c0b09;padding:40px 20px;font-family:Arial,sans-serif;color:#aaa"><div style="max-width:560px;margin:auto;border:1px solid #3b3630;padding:36px;background:#151310"><div style="color:#b8965a;letter-spacing:6px;font-size:12px;margin-bottom:28px">NŌIR</div><h1 style="font-family:Georgia,serif;font-weight:normal;color:#f2ede6;font-size:32px">${title}</h1><p style="line-height:1.8">${content}</p><p style="border-top:1px solid #3b3630;padding-top:20px;margin-top:32px;font-size:12px">noir-studio.com</p></div></div>`;
+}
+
+export function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+export function formatAmount(amountInCents: number): string {
+  return `$${(amountInCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+}
+
+export async function sendVerificationEmailRequest(email: string, env: Record<string, string>) {
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    throw new Error('Enter a valid email address.');
+  }
+  if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
+    throw new Error('Email verification is not configured. Add RESEND_API_KEY and RESEND_FROM_EMAIL.');
+  }
+
+  const code = crypto.randomInt(100000, 1000000).toString();
+  verificationCodes.set(email, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
+
+  const resend = new Resend(env.RESEND_API_KEY);
+  const result = await resend.emails.send({
+    from: env.RESEND_FROM_EMAIL,
+    to: email,
+    subject: 'Your NŌIR verification code',
+    html: emailLayout('Verify your email', `Your NŌIR verification code is <strong style="font-size:28px;letter-spacing:8px;color:#b8965a">${code}</strong><br><br>This code expires in 10 minutes. If you did not request it, you can safely ignore this message.`),
+  });
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  return { sent: true };
+}
+
+export async function verifyEmailCodeRequest(email: string, code: string) {
+  const saved = verificationCodes.get(email);
+  const verified = Boolean(saved && saved.expiresAt > Date.now() && saved.code === code);
+  if (!verified) {
+    throw new Error('That code is incorrect or has expired.');
+  }
+  verificationCodes.delete(email);
+  return { verified: true };
+}
+
+export async function sendContactMessageRequest(body: Record<string, any>, env: Record<string, string>) {
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  const email = typeof body.email === 'string' ? body.email.trim() : '';
+  const subject = typeof body.subject === 'string' ? body.subject.trim() : '';
+  const message = typeof body.message === 'string' ? body.message.trim() : '';
+
+  if (!name || !/^\S+@\S+\.\S+$/.test(email) || !subject || !message) {
+    throw new Error('Please complete every field before sending your message.');
+  }
+
+  if (name.length > 120 || email.length > 200 || subject.length > 200 || message.length > 5000) {
+    throw new Error('One or more fields are too long.');
+  }
+
+  if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
+    throw new Error('Email delivery is not configured.');
+  }
+
+  const resend = new Resend(env.RESEND_API_KEY);
+  const result = await resend.emails.send({
+    from: env.RESEND_FROM_EMAIL,
+    to: env.RESEND_CONTACT_TO_EMAIL || 'Bolajidavid05@gmail.com',
+    replyTo: email,
+    subject: `NŌIR contact: ${subject}`,
+    html: emailLayout(`Message from ${escapeHtml(name)}`, `<strong style="color:#b8965a">${escapeHtml(subject)}</strong><br><br>${escapeHtml(message).replace(/\n/g, '<br>')}<br><br><span style="font-size:12px">Reply directly to this email to reach ${escapeHtml(email)}.</span>`),
+  });
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  return { sent: true };
+}
+
+export async function createCheckoutSessionRequest(body: Record<string, any>, env: Record<string, string>, origin: string) {
+  const secretKey = env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error('Stripe is not configured. Add STRIPE_SECRET_KEY to your environment variables.');
+  }
+
+  const firebaseAdmin = getFirebaseAdmin(env);
+  const idToken = typeof body.idToken === 'string' ? body.idToken : '';
+  if (!firebaseAdmin || !idToken) {
+    throw new Error('Firebase account verification is not configured.');
+  }
+
+  const verifiedUser = await firebaseAdmin.auth.verifyIdToken(idToken);
+  const requestedItems = Array.isArray(body.items) ? body.items : [];
+  const lineItems = requestedItems.map((item: { id?: unknown; qty?: unknown }) => {
+    const product = products.find((candidate) => candidate.id === Number(item.id));
+    const quantity = Math.floor(Number(item.qty));
+    if (!product || !Number.isInteger(quantity) || quantity < 1 || quantity > 20) {
+      throw new Error('One or more cart items are invalid.');
+    }
+
+    return {
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: product.name,
+          description: product.category,
+          images: /^https:\/\//.test(product.image) ? [product.image] : undefined,
+        },
+        unit_amount: Math.round(product.price * 100),
+      },
+      quantity,
+    };
+  });
+
+  if (lineItems.length === 0) {
+    throw new Error('Your cart is empty.');
+  }
+
+  const stripe = new Stripe(secretKey);
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    line_items: lineItems,
+    customer_email: typeof body.email === 'string' ? body.email : undefined,
+    shipping_address_collection: {
+      allowed_countries: ['GB', 'US', 'FR', 'IT', 'DE'],
+    },
+    shipping_options: [{
+      shipping_rate_data: {
+        type: 'fixed_amount',
+        fixed_amount: { amount: 2500, currency: 'usd' },
+        display_name: 'Standard delivery',
+        delivery_estimate: { minimum: { unit: 'business_day', value: 3 }, maximum: { unit: 'business_day', value: 6 } },
+      },
+    }],
+    metadata: {
+      firebaseUid: verifiedUser.uid,
+      firebaseEmail: verifiedUser.email || '',
+    },
+    success_url: `${origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/?checkout=cancelled`,
+  });
+
+  return { url: session.url };
+}
