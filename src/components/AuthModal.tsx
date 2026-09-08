@@ -95,7 +95,10 @@ function getAuthErrorMessage(error: unknown): string {
     "auth/invalid-email": "Enter a valid email address.",
     "auth/weak-password": "Use a password with at least 6 characters.",
     "auth/popup-closed-by-user": "Google sign-in was cancelled.",
+    "auth/popup-blocked": "Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.",
+    "auth/unauthorized-domain": "This site is not authorized for Google sign-in. Add the current site domain in Firebase Authentication > Settings > Authorized domains.",
     "auth/operation-not-allowed": "This sign-in method is not enabled in Firebase Authentication.",
+    "auth/account-exists-with-different-credential": "An account already exists with this email. Sign in using the original sign-in method.",
     "auth/network-request-failed": "Network error. Check your connection and try again.",
   };
   return messages[code] || "Unable to authenticate. Check your details and try again.";
