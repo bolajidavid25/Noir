@@ -24,7 +24,7 @@ export default async function handler(req: any, res: any) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       const firebaseUid = session.metadata?.firebaseUid;
-      const firebaseAdmin = getFirebaseAdmin(env);
+      const firebaseAdmin = await getFirebaseAdmin(env);
       if (!firebaseUid || !firebaseAdmin) {
         throw new Error('Firebase transaction storage is not configured.');
       }

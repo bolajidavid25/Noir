@@ -1,9 +1,6 @@
 import crypto from 'node:crypto';
 import Stripe from 'stripe';
 import { Resend } from 'resend';
-import { cert, getApps, initializeApp as initializeAdminApp } from 'firebase-admin/app';
-import { getAuth as getAdminAuth } from 'firebase-admin/auth';
-import { getFirestore as getAdminFirestore, FieldValue } from 'firebase-admin/firestore';
 import { products } from '../../src/data/products.js';
 
 const verificationCodes = new Map<string, { code: string; expiresAt: number }>();
@@ -22,11 +19,16 @@ export function getServerEnv() {
   };
 }
 
-export function getFirebaseAdmin(env: NodeJS.ProcessEnv) {
+export async function getFirebaseAdmin(env: NodeJS.ProcessEnv) {
   const projectId = env.FIREBASE_ADMIN_PROJECT_ID?.trim();
   const clientEmail = env.FIREBASE_ADMIN_CLIENT_EMAIL?.trim();
   const privateKey = env.FIREBASE_ADMIN_PRIVATE_KEY?.trim();
   if (!projectId || !clientEmail || !privateKey) return null;
+  const [{ cert, getApps, initializeApp: initializeAdminApp }, { getAuth: getAdminAuth }, { getFirestore: getAdminFirestore }] = await Promise.all([
+    import('firebase-admin/app'),
+    import('firebase-admin/auth'),
+    import('firebase-admin/firestore'),
+  ]);
   const app = getApps()[0] || initializeAdminApp({ credential: cert({ projectId, clientEmail, privateKey }) });
   return { auth: getAdminAuth(app), firestore: getAdminFirestore(app) };
 }
@@ -129,7 +131,7 @@ export async function createCheckoutSessionRequest(body: Record<string, any>, en
     throw new Error('Stripe is not configured. Add STRIPE_SECRET_KEY to your environment variables.');
   }
 
-  const firebaseAdmin = getFirebaseAdmin(env);
+  const firebaseAdmin = await getFirebaseAdmin(env);
   const idToken = typeof body.idToken === 'string' ? body.idToken : '';
   if (!firebaseAdmin || !idToken) {
     throw new Error('Firebase account verification is not configured.');
