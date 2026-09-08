@@ -1,5 +1,7 @@
 node_modules/
 dist/
+.vscode/
+.qodo/
 .env
 .env.*
 !.env.example
@@ -8,5 +10,3 @@ firebase-adminsdk-*.json
 service-account*.json
 .vercel/
 *.log
-.vercel
-.env*
