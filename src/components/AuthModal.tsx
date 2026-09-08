@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { createUserWithEmailAndPassword, getRedirectResult, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, updateProfile } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { auth, db, googleProvider } from "../lib/firebase";
+import { auth, authPersistenceReady, db, googleProvider } from "../lib/firebase";
 
 interface AuthModalProps {
   open: boolean;
@@ -48,6 +48,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     setLoading(true);
     setError("");
     try {
+      await authPersistenceReady;
       if (mode === "signup") {
         const credential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(credential.user, { displayName: name });
@@ -68,6 +69,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     setLoading(true);
     setError("");
     try {
+      await authPersistenceReady;
       const result = await signInWithPopup(auth, googleProvider);
       await saveProfile(result.user.uid, {
         name: result.user.displayName || "",
@@ -130,6 +132,9 @@ function getAuthErrorMessage(error: unknown): string {
     "auth/operation-not-allowed": "This sign-in method is not enabled in Firebase Authentication.",
     "auth/account-exists-with-different-credential": "An account already exists with this email. Sign in using the original sign-in method.",
     "auth/network-request-failed": "Network error. Check your connection and try again.",
+    "auth/redirect-cancelled-by-user": "Google sign-in was cancelled. Please try again.",
+    "auth/web-storage-unsupported": "Your browser is blocking secure sign-in storage. Enable cookies and site storage for this site.",
+    "auth/internal-error": "Google sign-in could not finish. Check that this site is authorized in Firebase and try again.",
   };
   return messages[code] || "Unable to authenticate. Check your details and try again.";
 }
