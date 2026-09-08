@@ -53,8 +53,34 @@ export function formatAmount(amountInCents: number): string {
   return `$${(amountInCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 }
 
-function verificationDocumentId(email: string): string {
-  return crypto.createHash('sha256').update(email).digest('hex');
+function verificationSecret(env: NodeJS.ProcessEnv): string {
+  return env.VERIFICATION_CODE_SECRET || env.STRIPE_WEBHOOK_SECRET || env.STRIPE_SECRET_KEY || 'noir-verification-secret';
+}
+
+function createVerificationToken(email: string, code: string, expiresAt: number, env: NodeJS.ProcessEnv): string {
+  const payload = Buffer.from(JSON.stringify({
+    email,
+    codeHash: crypto.createHash('sha256').update(code).digest('hex'),
+    expiresAt,
+  })).toString('base64url');
+  const signature = crypto.createHmac('sha256', verificationSecret(env)).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+function verifyVerificationToken(email: string, code: string, token: string, env: NodeJS.ProcessEnv): boolean {
+  const [payload, signature] = token.split('.');
+  if (!payload || !signature) return false;
+  const expectedSignature = crypto.createHmac('sha256', verificationSecret(env)).update(payload).digest('base64url');
+  if (signature.length !== expectedSignature.length) return false;
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) return false;
+  try {
+    const saved = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { email?: string; codeHash?: string; expiresAt?: number };
+    return saved.email === email
+      && Boolean(saved.expiresAt && saved.expiresAt > Date.now())
+      && saved.codeHash === crypto.createHash('sha256').update(code).digest('hex');
+  } catch {
+    return false;
+  }
 }
 
 export async function sendVerificationEmailRequest(email: string, env: NodeJS.ProcessEnv) {
@@ -66,15 +92,7 @@ export async function sendVerificationEmailRequest(email: string, env: NodeJS.Pr
   }
 
   const code = crypto.randomInt(100000, 1000000).toString();
-  const firebaseAdmin = await getFirebaseAdmin(env);
-  if (!firebaseAdmin) {
-    throw new Error('Email verification storage is not configured. Add the Firebase Admin credentials.');
-  }
-  await firebaseAdmin.firestore.collection('emailVerificationCodes').doc(verificationDocumentId(email)).set({
-    code,
-    expiresAt: Date.now() + 10 * 60 * 1000,
-    updatedAt: Date.now(),
-  });
+  const expiresAt = Date.now() + 10 * 60 * 1000;
 
   const resend = new Resend(env.RESEND_API_KEY);
   const result = await resend.emails.send({
@@ -88,22 +106,14 @@ export async function sendVerificationEmailRequest(email: string, env: NodeJS.Pr
     throw new Error(result.error.message);
   }
 
-  return { sent: true };
+  return { sent: true, verificationToken: createVerificationToken(email, code, expiresAt, env) };
 }
 
-export async function verifyEmailCodeRequest(email: string, code: string, env: NodeJS.ProcessEnv) {
-  const firebaseAdmin = await getFirebaseAdmin(env);
-  if (!firebaseAdmin) {
-    throw new Error('Email verification storage is not configured. Add the Firebase Admin credentials.');
-  }
-  const verificationRef = firebaseAdmin.firestore.collection('emailVerificationCodes').doc(verificationDocumentId(email));
-  const verificationSnapshot = await verificationRef.get();
-  const saved = verificationSnapshot.data() as { code?: string; expiresAt?: number } | undefined;
-  const verified = Boolean(saved?.expiresAt && saved.expiresAt > Date.now() && saved.code === code);
+export async function verifyEmailCodeRequest(email: string, code: string, token: string, env: NodeJS.ProcessEnv) {
+  const verified = verifyVerificationToken(email, code, token, env);
   if (!verified) {
     throw new Error('That code is incorrect or has expired.');
   }
-  await verificationRef.delete();
   return { verified: true };
 }
 

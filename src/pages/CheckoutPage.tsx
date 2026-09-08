@@ -16,6 +16,7 @@ export default function CheckoutPage({ items, onBack, onRemove, onQtyChange }: C
   const [error, setError] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationToken, setVerificationToken] = useState("");
   const [emailVerified, setEmailVerified] = useState(false);
   const [verificationLoading, setVerificationLoading] = useState(false);
 
@@ -74,7 +75,9 @@ export default function CheckoutPage({ items, onBack, onRemove, onQtyChange }: C
       });
       const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error || "Unable to send verification code.");
-      setVerificationSent(true);
+      setVerificationToken(result.verificationToken || "");
+      setVerificationSent(Boolean(result.verificationToken));
+      if (!result.verificationToken) throw new Error("The verification service returned an incomplete response.");
     } catch (verificationError) {
       setError(verificationError instanceof Error ? verificationError.message : "Unable to send verification code.");
     } finally {
@@ -89,7 +92,7 @@ export default function CheckoutPage({ items, onBack, onRemove, onQtyChange }: C
       const response = await fetch("/api/verify-email-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: verificationCode }),
+        body: JSON.stringify({ email, code: verificationCode, verificationToken }),
       });
       const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error || "Unable to verify email.");
@@ -128,7 +131,7 @@ export default function CheckoutPage({ items, onBack, onRemove, onQtyChange }: C
               <div className="checkout-section-heading"><span>01</span><h2>Contact</h2></div>
               <label className="checkout-label" htmlFor="email">Email address</label>
               <div className="checkout-verification-row">
-                <input className="checkout-input" id="email" type="email" required value={email} disabled={emailVerified} onChange={(event) => { setEmail(event.target.value); setEmailVerified(false); setVerificationSent(false); }} placeholder="you@example.com" />
+                <input className="checkout-input" id="email" type="email" required value={email} disabled={emailVerified} onChange={(event) => { setEmail(event.target.value); setEmailVerified(false); setVerificationSent(false); setVerificationToken(""); }} placeholder="you@example.com" />
                 {!emailVerified && <button className="checkout-verify-button" type="button" onClick={sendVerificationCode} disabled={verificationLoading || !email}>{verificationLoading ? "Sending..." : verificationSent ? "Resend code" : "Verify email"}</button>}
               </div>
               {emailVerified ? <p className="checkout-verified">Email verified</p> : verificationSent && <div className="checkout-code-row"><input className="checkout-input" inputMode="numeric" maxLength={6} value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, ""))} placeholder="6-digit code" aria-label="Email verification code" /><button className="checkout-verify-button" type="button" onClick={verifyEmail} disabled={verificationLoading || verificationCode.length !== 6}>Confirm</button></div>}
@@ -180,7 +183,7 @@ export default function CheckoutPage({ items, onBack, onRemove, onQtyChange }: C
   );
 }
 
-async function readApiResponse(response: Response): Promise<{ url?: string; error?: string }> {
+  async function readApiResponse(response: Response): Promise<{ url?: string; error?: string; verificationToken?: string }> {
   const text = await response.text();
   if (!text) return {};
   try {
