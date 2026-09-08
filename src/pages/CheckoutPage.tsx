@@ -54,7 +54,7 @@ export default function CheckoutPage({ items, onBack, onRemove, onQtyChange }: C
           })),
         }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok || !result.url) throw new Error(result.error || "Unable to start checkout.");
       window.location.assign(result.url);
     } catch (checkoutError) {
@@ -72,7 +72,7 @@ export default function CheckoutPage({ items, onBack, onRemove, onQtyChange }: C
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error || "Unable to send verification code.");
       setVerificationSent(true);
     } catch (verificationError) {
@@ -91,7 +91,7 @@ export default function CheckoutPage({ items, onBack, onRemove, onQtyChange }: C
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code: verificationCode }),
       });
-      const result = await response.json();
+      const result = await readApiResponse(response);
       if (!response.ok) throw new Error(result.error || "Unable to verify email.");
       setEmailVerified(true);
     } catch (verificationError) {
@@ -178,4 +178,14 @@ export default function CheckoutPage({ items, onBack, onRemove, onQtyChange }: C
       </div>
     </main>
   );
+}
+
+async function readApiResponse(response: Response): Promise<{ url?: string; error?: string }> {
+  const text = await response.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text) as { url?: string; error?: string };
+  } catch {
+    return { error: response.ok ? "The server returned an invalid response." : `The server returned an error (${response.status}). Please try again.` };
+  }
 }

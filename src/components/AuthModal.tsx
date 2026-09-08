@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, updateProfile } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "../lib/firebase";
 
@@ -54,6 +54,10 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
       await saveProfile(credential.user.uid, { name: credential.user.displayName || "", email: credential.user.email || "" });
       onClose();
     } catch (authError) {
+      if (getAuthErrorCode(authError) === "auth/popup-blocked") {
+        await signInWithRedirect(auth, googleProvider);
+        return;
+      }
       setError(getAuthErrorMessage(authError));
     } finally {
       setLoading(false);
@@ -88,7 +92,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 }
 
 function getAuthErrorMessage(error: unknown): string {
-  const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
+  const code = getAuthErrorCode(error);
   const messages: Record<string, string> = {
     "auth/email-already-in-use": "An account already exists with this email. Sign in instead.",
     "auth/invalid-credential": "The email or password is incorrect.",
@@ -102,4 +106,8 @@ function getAuthErrorMessage(error: unknown): string {
     "auth/network-request-failed": "Network error. Check your connection and try again.",
   };
   return messages[code] || "Unable to authenticate. Check your details and try again.";
+}
+
+function getAuthErrorCode(error: unknown): string {
+  return typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
 }
