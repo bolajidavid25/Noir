@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, updateProfile } from "firebase/auth";
+import { useEffect, useState, type FormEvent } from "react";
+import { createUserWithEmailAndPassword, getRedirectResult, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, updateProfile } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "../lib/firebase";
 
@@ -15,6 +15,20 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getRedirectResult(auth).then(async (result) => {
+      if (!active || !result) return;
+      await saveProfile(result.user.uid, {
+        name: result.user.displayName || "",
+        email: result.user.email || "",
+      });
+    }).catch((authError) => {
+      if (active) setError(getAuthErrorMessage(authError));
+    });
+    return () => { active = false; };
+  }, []);
 
   const saveProfile = async (uid: string, profile: { name: string; email: string }) => {
     try {
@@ -44,6 +58,10 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
       }
       onClose();
     } catch (authError) {
+      if (getAuthErrorCode(authError) === "auth/popup-blocked") {
+        await signInWithRedirect(auth, googleProvider);
+        return;
+      }
       setError(getAuthErrorMessage(authError));
     } finally {
       setLoading(false);
