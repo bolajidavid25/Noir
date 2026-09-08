@@ -22,7 +22,7 @@ export function getServerEnv() {
   };
 }
 
-export function getFirebaseAdmin(env: Record<string, string>) {
+export function getFirebaseAdmin(env: NodeJS.ProcessEnv) {
   const projectId = env.FIREBASE_ADMIN_PROJECT_ID?.trim();
   const clientEmail = env.FIREBASE_ADMIN_CLIENT_EMAIL?.trim();
   const privateKey = env.FIREBASE_ADMIN_PRIVATE_KEY?.trim();
@@ -53,7 +53,7 @@ export function formatAmount(amountInCents: number): string {
   return `$${(amountInCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 }
 
-export async function sendVerificationEmailRequest(email: string, env: Record<string, string>) {
+export async function sendVerificationEmailRequest(email: string, env: NodeJS.ProcessEnv) {
   if (!/^\S+@\S+\.\S+$/.test(email)) {
     throw new Error('Enter a valid email address.');
   }
@@ -89,7 +89,7 @@ export async function verifyEmailCodeRequest(email: string, code: string) {
   return { verified: true };
 }
 
-export async function sendContactMessageRequest(body: Record<string, any>, env: Record<string, string>) {
+export async function sendContactMessageRequest(body: Record<string, any>, env: NodeJS.ProcessEnv) {
   const name = typeof body.name === 'string' ? body.name.trim() : '';
   const email = typeof body.email === 'string' ? body.email.trim() : '';
   const subject = typeof body.subject === 'string' ? body.subject.trim() : '';
@@ -123,7 +123,7 @@ export async function sendContactMessageRequest(body: Record<string, any>, env: 
   return { sent: true };
 }
 
-export async function createCheckoutSessionRequest(body: Record<string, any>, env: Record<string, string>, origin: string) {
+export async function createCheckoutSessionRequest(body: Record<string, any>, env: NodeJS.ProcessEnv, origin: string) {
   const secretKey = env.STRIPE_SECRET_KEY;
   if (!secretKey) {
     throw new Error('Stripe is not configured. Add STRIPE_SECRET_KEY to your environment variables.');
