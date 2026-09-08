@@ -1,4 +1,5 @@
-import type { Product } from "./products";
+import { products } from "./products.js";
+import type { Product } from "./products.js";
 
 type ItemTuple = [name: string, price: number, desc: string, tag?: string];
 type BrandConfig = { b: string; items: ItemTuple[] };

@@ -1,4 +1,5 @@
-import type { Product } from "./products";
+import { products } from "./products.js";
+import type { Product } from "./products.js";
 
 const imgs = [
   "https://images.unsplash.com/photo-1616406432452-07bc5938759d?w=600&h=750&fit=crop&auto=format",

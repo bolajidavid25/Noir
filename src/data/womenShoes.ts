@@ -1,5 +1,6 @@
-import { gen } from "./utils";
-import type { Product } from "./products";
+import { products } from "./products.js";
+import { gen } from "./utils.js";
+import type { Product } from "./products.js";
 
 const imgs = [
   "https://images.unsplash.com/photo-1632793039179-8d97795d20c6?w=600&h=750&fit=crop&auto=format",

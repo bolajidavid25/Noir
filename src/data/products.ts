@@ -71,12 +71,12 @@ export const categoryMeta: Record<string, { image: string; headline: string; sub
 };
 
 // ── Core products (keep existing IDs 1–31) ────────────────────────────────────
-import { womenShoesProducts } from "./womenShoes";
-import { bagsProducts }        from "./bags";
-import { womenSuitsProducts }  from "./womenSuits";
-import { menSuitsProducts }    from "./menSuits";
-import { menShoesProducts }    from "./menShoes";
-import { fragrancesProducts }  from "./fragrances";
+import { womenShoesProducts } from "./womenShoes.js";
+import { bagsProducts }        from "./bags.js";
+import { womenSuitsProducts }  from "./womenSuits.js";
+import { menSuitsProducts }    from "./menSuits.js";
+import { menShoesProducts }    from "./menShoes.js";
+import { fragrancesProducts }  from "./fragrances.js";
 
 const coreProducts: Product[] = [
   // Women's Clothing
