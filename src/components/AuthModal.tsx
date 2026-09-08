@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { createUserWithEmailAndPassword, getRedirectResult, signInWithEmailAndPassword, signInWithRedirect, updateProfile } from "firebase/auth";
+import { useState, type FormEvent } from "react";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, updateProfile } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "../lib/firebase";
 
@@ -26,17 +26,6 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
       // Authentication should still succeed if profile persistence is unavailable.
     }
   };
-
-  useEffect(() => {
-    let active = true;
-    getRedirectResult(auth).then(async (result) => {
-      if (!active || !result) return;
-      await saveProfile(result.user.uid, { name: result.user.displayName || "", email: result.user.email || "" });
-    }).catch((authError) => {
-      if (active) setError(getAuthErrorMessage(authError));
-    });
-    return () => { active = false; };
-  }, []);
 
   if (!open) return null;
 
@@ -65,9 +54,15 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     setLoading(true);
     setError("");
     try {
-      await signInWithRedirect(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      await saveProfile(result.user.uid, {
+        name: result.user.displayName || "",
+        email: result.user.email || "",
+      });
+      onClose();
     } catch (authError) {
       setError(getAuthErrorMessage(authError));
+    } finally {
       setLoading(false);
     }
   };
