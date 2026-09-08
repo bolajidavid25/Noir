@@ -10,7 +10,7 @@ export default async function handler(req: any, res: any) {
     const body = await (req.body && typeof req.body === 'object' ? req.body : JSON.parse(req.body || '{}'));
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
     const code = typeof body.code === 'string' ? body.code.trim() : '';
-    const result = await verifyEmailCodeRequest(email, code);
+    const result = await verifyEmailCodeRequest(email, code, process.env);
     res.status(200).json(result);
   } catch (error) {
     res.status(400).json({ error: error instanceof Error ? error.message : 'Unable to verify email.' });

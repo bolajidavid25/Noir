@@ -3,8 +3,6 @@ import Stripe from 'stripe';
 import { Resend } from 'resend';
 import { products } from '../../src/data/products.js';
 
-const verificationCodes = new Map<string, { code: string; expiresAt: number }>();
-
 export function getServerEnv() {
   return {
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || '',
@@ -55,6 +53,10 @@ export function formatAmount(amountInCents: number): string {
   return `$${(amountInCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 }
 
+function verificationDocumentId(email: string): string {
+  return crypto.createHash('sha256').update(email).digest('hex');
+}
+
 export async function sendVerificationEmailRequest(email: string, env: NodeJS.ProcessEnv) {
   if (!/^\S+@\S+\.\S+$/.test(email)) {
     throw new Error('Enter a valid email address.');
@@ -64,7 +66,15 @@ export async function sendVerificationEmailRequest(email: string, env: NodeJS.Pr
   }
 
   const code = crypto.randomInt(100000, 1000000).toString();
-  verificationCodes.set(email, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
+  const firebaseAdmin = await getFirebaseAdmin(env);
+  if (!firebaseAdmin) {
+    throw new Error('Email verification storage is not configured. Add the Firebase Admin credentials.');
+  }
+  await firebaseAdmin.firestore.collection('emailVerificationCodes').doc(verificationDocumentId(email)).set({
+    code,
+    expiresAt: Date.now() + 10 * 60 * 1000,
+    updatedAt: Date.now(),
+  });
 
   const resend = new Resend(env.RESEND_API_KEY);
   const result = await resend.emails.send({
@@ -81,13 +91,19 @@ export async function sendVerificationEmailRequest(email: string, env: NodeJS.Pr
   return { sent: true };
 }
 
-export async function verifyEmailCodeRequest(email: string, code: string) {
-  const saved = verificationCodes.get(email);
-  const verified = Boolean(saved && saved.expiresAt > Date.now() && saved.code === code);
+export async function verifyEmailCodeRequest(email: string, code: string, env: NodeJS.ProcessEnv) {
+  const firebaseAdmin = await getFirebaseAdmin(env);
+  if (!firebaseAdmin) {
+    throw new Error('Email verification storage is not configured. Add the Firebase Admin credentials.');
+  }
+  const verificationRef = firebaseAdmin.firestore.collection('emailVerificationCodes').doc(verificationDocumentId(email));
+  const verificationSnapshot = await verificationRef.get();
+  const saved = verificationSnapshot.data() as { code?: string; expiresAt?: number } | undefined;
+  const verified = Boolean(saved?.expiresAt && saved.expiresAt > Date.now() && saved.code === code);
   if (!verified) {
     throw new Error('That code is incorrect or has expired.');
   }
-  verificationCodes.delete(email);
+  await verificationRef.delete();
   return { verified: true };
 }
 
