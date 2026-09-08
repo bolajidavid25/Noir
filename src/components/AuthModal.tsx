@@ -58,10 +58,6 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
       }
       onClose();
     } catch (authError) {
-      if (getAuthErrorCode(authError) === "auth/popup-blocked") {
-        await signInWithRedirect(auth, googleProvider);
-        return;
-      }
       setError(getAuthErrorMessage(authError));
     } finally {
       setLoading(false);
@@ -79,6 +75,15 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
       });
       onClose();
     } catch (authError) {
+      if (getAuthErrorCode(authError) === "auth/popup-blocked") {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (redirectError) {
+          setError(getAuthErrorMessage(redirectError));
+          return;
+        }
+      }
       setError(getAuthErrorMessage(authError));
     } finally {
       setLoading(false);
