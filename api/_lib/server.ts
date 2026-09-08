@@ -4,7 +4,6 @@ import { Resend } from 'resend';
 import { cert, getApps, initializeApp as initializeAdminApp } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { getFirestore as getAdminFirestore, FieldValue } from 'firebase-admin/firestore';
-import { products } from '../../src/data/products';
 import { products } from '../../src/data/products.js';
 
 const verificationCodes = new Map<string, { code: string; expiresAt: number }>();

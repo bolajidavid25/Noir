@@ -1,6 +1,5 @@
 import Stripe from 'stripe';
-import { getFirebaseAdmin, readRawBody, formatAmount, emailLayout, getServerEnv } from './_lib/server';
-import { getFirebaseAdmin, readRawBody } from './_lib/server.js';
+import { getFirebaseAdmin, readRawBody, formatAmount, emailLayout, getServerEnv } from './_lib/server.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
