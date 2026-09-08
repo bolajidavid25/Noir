@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signOut, type User } from "firebase/auth";
+import { getRedirectResult, onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { arrayUnion, doc, setDoc } from "firebase/firestore";
 import Navbar from "./components/Navbar";
 import AuthModal from "./components/AuthModal";
@@ -11,7 +11,7 @@ import AllProductsPage from "./pages/AllProductsPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import AccountPage from "./pages/AccountPage";
 import type { Product } from "./data/products";
-import { auth, db } from "./lib/firebase";
+import { auth, authPersistenceReady, db } from "./lib/firebase";
 
 export default function App() {
   const [page, setPage] = useState<"home" | "products" | "checkout" | "account">("home");
@@ -23,6 +23,20 @@ export default function App() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [paymentReference, setPaymentReference] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    authPersistenceReady.then(() => getRedirectResult(auth)).then((result) => {
+      if (!active || !result) return;
+      return setDoc(doc(db, "users", result.user.uid), {
+        name: result.user.displayName || "",
+        email: result.user.email || "",
+      }, { merge: true });
+    }).catch(() => {
+      // The auth-state listener still handles an established Firebase session.
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => onAuthStateChanged(auth, (currentUser) => {
     setUser(currentUser);
