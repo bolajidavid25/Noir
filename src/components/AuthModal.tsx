@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, updateProfile } from "firebase/auth";
+import { useEffect, useState, type FormEvent } from "react";
+import { createUserWithEmailAndPassword, getRedirectResult, signInWithEmailAndPassword, signInWithRedirect, updateProfile } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "../lib/firebase";
 
@@ -16,14 +16,29 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (!open) return null;
-
   const saveProfile = async (uid: string, profile: { name: string; email: string }) => {
-    await setDoc(doc(db, "users", uid), {
-      ...profile,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+    try {
+      await setDoc(doc(db, "users", uid), {
+        ...profile,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    } catch {
+      // Authentication should still succeed if profile persistence is unavailable.
+    }
   };
+
+  useEffect(() => {
+    let active = true;
+    getRedirectResult(auth).then(async (result) => {
+      if (!active || !result) return;
+      await saveProfile(result.user.uid, { name: result.user.displayName || "", email: result.user.email || "" });
+    }).catch((authError) => {
+      if (active) setError(getAuthErrorMessage(authError));
+    });
+    return () => { active = false; };
+  }, []);
+
+  if (!open) return null;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -50,16 +65,9 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     setLoading(true);
     setError("");
     try {
-      const credential = await signInWithPopup(auth, googleProvider);
-      await saveProfile(credential.user.uid, { name: credential.user.displayName || "", email: credential.user.email || "" });
-      onClose();
+      await signInWithRedirect(auth, googleProvider);
     } catch (authError) {
-      if (getAuthErrorCode(authError) === "auth/popup-blocked") {
-        await signInWithRedirect(auth, googleProvider);
-        return;
-      }
       setError(getAuthErrorMessage(authError));
-    } finally {
       setLoading(false);
     }
   };
