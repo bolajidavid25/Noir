@@ -350,8 +350,8 @@ function getFirebaseAdmin(env: Record<string, string>) {
   if (privateKey.startsWith("'") && privateKey.endsWith("'")) privateKey = privateKey.slice(1, -1)
   privateKey = privateKey.replace(/\\n/g, '\n')
   
-  if (privateKey && !privateKey.includes('\n')) {
-    const match = privateKey.match(/-----BEGIN PRIVATE KEY-----\s*(.*?)\s*-----END PRIVATE KEY-----/)
+  if (privateKey) {
+    const match = privateKey.match(/-----BEGIN PRIVATE KEY-----\s*(.*?)\s*-----END PRIVATE KEY-----/s)
     if (match) {
       const body = match[1].replace(/\s+/g, '')
       privateKey = `-----BEGIN PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join('\n')}\n-----END PRIVATE KEY-----\n`
