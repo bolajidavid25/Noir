@@ -18,7 +18,6 @@ export default function CheckoutPage({ items, onBack, onRemove, onQtyChange }: C
   const [verificationSent, setVerificationSent] = useState(false);
   const [verificationToken, setVerificationToken] = useState("");
   const [emailVerified, setEmailVerified] = useState(false);
-  const [verificationLoading, setVerificationLoading] = useState(false);
 
   const subtotal = items.reduce((sum, item) => sum + item.product.price * item.qty, 0);
   const shipping = subtotal > 2500 ? 0 : 25;
@@ -26,32 +25,22 @@ export default function CheckoutPage({ items, onBack, onRemove, onQtyChange }: C
 
   const beginPayment = async (event: FormEvent) => {
     event.preventDefault();
-    if (items.length === 0) return;
-    if (!emailVerified) {
-      setError("Verify your email address before continuing.");
-      return;
-    }
     setLoading(true);
     setError("");
 
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) throw new Error("Sign in before starting checkout.");
-      const idToken = await currentUser.getIdToken();
       const response = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          country,
-          idToken,
-          items: items.map(({ product, qty }) => ({
-            id: product.id,
-            name: product.name,
-            category: product.category,
-            image: product.image,
-            price: product.price,
-            qty,
+          items: items.map((product) => ({
+            id: product.product.id,
+            name: product.product.name,
+            category: product.product.category,
+            image: product.product.image,
+            price: product.product.price,
+            qty: product.qty,
           })),
         }),
       });
@@ -61,46 +50,6 @@ export default function CheckoutPage({ items, onBack, onRemove, onQtyChange }: C
     } catch (checkoutError) {
       setError(checkoutError instanceof Error ? checkoutError.message : "Unable to start checkout.");
       setLoading(false);
-    }
-  };
-
-  const sendVerificationCode = async () => {
-    setVerificationLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/send-verification-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const result = await readApiResponse(response);
-      if (!response.ok) throw new Error(result.error || "Unable to send verification code.");
-      setVerificationToken(result.verificationToken || "");
-      setVerificationSent(Boolean(result.verificationToken));
-      if (!result.verificationToken) throw new Error("The verification service returned an incomplete response.");
-    } catch (verificationError) {
-      setError(verificationError instanceof Error ? verificationError.message : "Unable to send verification code.");
-    } finally {
-      setVerificationLoading(false);
-    }
-  };
-
-  const verifyEmail = async () => {
-    setVerificationLoading(true);
-    setError("");
-    try {
-      const response = await fetch("/api/verify-email-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: verificationCode, verificationToken }),
-      });
-      const result = await readApiResponse(response);
-      if (!response.ok) throw new Error(result.error || "Unable to verify email.");
-      setEmailVerified(true);
-    } catch (verificationError) {
-      setError(verificationError instanceof Error ? verificationError.message : "Unable to verify email.");
-    } finally {
-      setVerificationLoading(false);
     }
   };
 
@@ -131,10 +80,8 @@ export default function CheckoutPage({ items, onBack, onRemove, onQtyChange }: C
               <div className="checkout-section-heading"><span>01</span><h2>Contact</h2></div>
               <label className="checkout-label" htmlFor="email">Email address</label>
               <div className="checkout-verification-row">
-                <input className="checkout-input" id="email" type="email" required value={email} disabled={emailVerified} onChange={(event) => { setEmail(event.target.value); setEmailVerified(false); setVerificationSent(false); setVerificationToken(""); }} placeholder="you@example.com" />
-                {!emailVerified && <button className="checkout-verify-button" type="button" onClick={sendVerificationCode} disabled={verificationLoading || !email}>{verificationLoading ? "Sending..." : verificationSent ? "Resend code" : "Verify email"}</button>}
+                <input className="checkout-input" id="email" type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" />
               </div>
-              {emailVerified ? <p className="checkout-verified">Email verified</p> : verificationSent && <div className="checkout-code-row"><input className="checkout-input" inputMode="numeric" maxLength={6} value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, ""))} placeholder="6-digit code" aria-label="Email verification code" /><button className="checkout-verify-button" type="button" onClick={verifyEmail} disabled={verificationLoading || verificationCode.length !== 6}>Confirm</button></div>}
             </section>
 
             <section className="checkout-section">

@@ -79,8 +79,21 @@ function stripeCheckoutPlugin(env: Record<string, string>): Plugin {
           const body = await readJsonBody(req)
           const firebaseAdmin = getFirebaseAdmin(env)
           const idToken = typeof body.idToken === 'string' ? body.idToken : ''
-          if (!firebaseAdmin || !idToken) throw new Error('Firebase account verification is not configured.')
-          const verifiedUser = await firebaseAdmin.auth.verifyIdToken(idToken)
+          
+          let firebaseUid = 'guest'
+          let firebaseEmail = typeof body.email === 'string' ? body.email : ''
+          
+          if (idToken && firebaseAdmin) {
+            try {
+              const verifiedUser = await firebaseAdmin.auth.verifyIdToken(idToken)
+              firebaseUid = verifiedUser.uid
+              if (verifiedUser.email) {
+                firebaseEmail = verifiedUser.email
+              }
+            } catch (err) {
+              // Ignore token verification errors to allow fallback to guest checkout
+            }
+          }
           const requestedItems = Array.isArray(body.items) ? body.items : []
           const lineItems = requestedItems.map((item: { id?: unknown; qty?: unknown }) => {
             const product = products.find((candidate) => candidate.id === Number(item.id))
@@ -111,7 +124,7 @@ function stripeCheckoutPlugin(env: Record<string, string>): Plugin {
           const session = await stripe.checkout.sessions.create({
             mode: 'payment',
             line_items: lineItems,
-            customer_email: typeof body.email === 'string' ? body.email : undefined,
+            customer_email: firebaseEmail || undefined,
             shipping_address_collection: {
               allowed_countries: ['GB', 'US', 'FR', 'IT', 'DE'],
             },
@@ -126,8 +139,8 @@ function stripeCheckoutPlugin(env: Record<string, string>): Plugin {
               },
             ],
             metadata: {
-              firebaseUid: verifiedUser.uid,
-              firebaseEmail: verifiedUser.email || '',
+              firebaseUid,
+              firebaseEmail,
             },
             success_url: `${origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${origin}/?checkout=cancelled`,

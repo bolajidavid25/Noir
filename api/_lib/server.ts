@@ -136,6 +136,8 @@ export async function sendContactMessageRequest(body: Record<string, any>, env: 
   }
 
   const resend = new Resend(env.RESEND_API_KEY);
+  
+  // Send the message to the store owner
   const result = await resend.emails.send({
     from: env.RESEND_FROM_EMAIL,
     to: env.RESEND_CONTACT_TO_EMAIL || 'Bolajidavid05@gmail.com',
@@ -146,6 +148,22 @@ export async function sendContactMessageRequest(body: Record<string, any>, env: 
 
   if (result.error) {
     throw new Error(result.error.message);
+  }
+
+  // Send a confirmation email to the user
+  const confirmationResult = await resend.emails.send({
+    from: env.RESEND_FROM_EMAIL,
+    to: email,
+    subject: 'We have received your message - NŌIR',
+    html: emailLayout(
+      'Message Received',
+      `Dear ${escapeHtml(name)},<br><br>Thank you for reaching out to us. We have received your message regarding <strong style="color:#b8965a">"${escapeHtml(subject)}"</strong> and our team will provide a response within the next 24 hours.<br><br>Best regards,<br>The NŌIR Team`
+    ),
+  });
+
+  if (confirmationResult.error) {
+    console.error('Failed to send confirmation email to user:', confirmationResult.error);
+    // We do not throw an error here to avoid failing the whole request if the confirmation email fails.
   }
 
   return { sent: true };
@@ -159,11 +177,23 @@ export async function createCheckoutSessionRequest(body: Record<string, any>, en
 
   const firebaseAdmin = await getFirebaseAdmin(env);
   const idToken = typeof body.idToken === 'string' ? body.idToken : '';
-  if (!firebaseAdmin || !idToken) {
-    throw new Error('Firebase account verification is not configured.');
+  
+  let firebaseUid = 'guest';
+  let firebaseEmail = typeof body.email === 'string' ? body.email : '';
+
+  if (idToken && firebaseAdmin) {
+    try {
+      const verifiedUser = await firebaseAdmin.auth.verifyIdToken(idToken);
+      firebaseUid = verifiedUser.uid;
+      if (verifiedUser.email) {
+        firebaseEmail = verifiedUser.email;
+      }
+    } catch (err) {
+      // Ignore token verification errors to allow fallback to guest checkout,
+      // or you could throw an error if you want to enforce strictly valid tokens.
+    }
   }
 
-  const verifiedUser = await firebaseAdmin.auth.verifyIdToken(idToken);
   const requestedItems = Array.isArray(body.items) ? body.items : [];
   const lineItems = requestedItems.map((item: { id?: unknown; qty?: unknown }) => {
     const product = products.find((candidate) => candidate.id === Number(item.id));
@@ -194,7 +224,7 @@ export async function createCheckoutSessionRequest(body: Record<string, any>, en
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     line_items: lineItems,
-    customer_email: typeof body.email === 'string' ? body.email : undefined,
+    customer_email: firebaseEmail || undefined,
     shipping_address_collection: {
       allowed_countries: ['GB', 'US', 'FR', 'IT', 'DE'],
     },
@@ -207,8 +237,8 @@ export async function createCheckoutSessionRequest(body: Record<string, any>, en
       },
     }],
     metadata: {
-      firebaseUid: verifiedUser.uid,
-      firebaseEmail: verifiedUser.email || '',
+      firebaseUid,
+      firebaseEmail,
     },
     success_url: `${origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/?checkout=cancelled`,

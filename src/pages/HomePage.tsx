@@ -559,6 +559,20 @@ function ContactForm() {
     }
   };
 
+  if (status === "sent") {
+    return (
+      <div style={{ padding: "4rem 2rem", background: "var(--bg-elevated)", border: "1px solid var(--border)", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: "1.8rem", color: "var(--text)", marginBottom: "1rem" }}>Message Received</h3>
+        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", lineHeight: "1.7", fontFamily: "'Inter', sans-serif", marginBottom: "2rem", maxWidth: "400px" }}>
+          Thank you for reaching out to us. We have received your message and our team will get back to you shortly.
+        </p>
+        <button onClick={() => setStatus("idle")} style={{ background: "transparent", border: "1px solid var(--border)", color: "var(--text)", padding: "0.8rem 1.5rem", fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer", fontFamily: "'Inter', sans-serif", transition: "color 0.2s, border-color 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.color = "var(--gold)"; e.currentTarget.style.borderColor = "var(--gold)"; }} onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.borderColor = "var(--border)"; }}>
+          Send Another Message
+        </button>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={submitMessage} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       {[["Name", "text", "Your name"], ["Email", "email", "your@email.com"], ["Subject", "text", "What brings you here?"]].map(([label, type, placeholder]) => (
@@ -571,7 +585,6 @@ function ContactForm() {
         <label style={{ display: "block", fontSize: "0.6rem", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-muted)", fontFamily: "'Inter', sans-serif", marginBottom: 8 }}>Message</label>
         <textarea name="message" required placeholder="Tell us everything." rows={4} style={{ width: "100%", background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text)", padding: "0.85rem 1rem", fontSize: "0.85rem", fontFamily: "'Inter', sans-serif", outline: "none", resize: "none", transition: "border-color 0.2s" }} onFocus={(e) => (e.currentTarget.style.borderColor = "var(--gold)")} onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")} />
       </div>
-      {status === "sent" && <p style={{ color: "var(--gold)", fontSize: "0.72rem", fontFamily: "'Inter', sans-serif" }}>Your message has been sent.</p>}
       {status === "error" && <p style={{ color: "#d78979", fontSize: "0.72rem", fontFamily: "'Inter', sans-serif" }}>{error}</p>}
       <button type="submit" disabled={status === "sending"} style={{ background: "var(--gold)", color: "var(--gold-on)", border: "none", padding: "1rem", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 600, cursor: status === "sending" ? "wait" : "pointer", fontFamily: "'Inter', sans-serif", transition: "opacity 0.2s" }} onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")} onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}>{status === "sending" ? "Sending..." : "Send Message"}</button>
     </form>

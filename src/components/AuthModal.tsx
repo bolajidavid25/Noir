@@ -39,11 +39,26 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
         const credential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(credential.user, { displayName: name });
         await saveProfile(credential.user.uid, { name, email });
+        
+        // Import sendEmailVerification from firebase/auth at the top of the file if not already there, 
+        // but since we can't reliably do that without seeing the top, we'll use auth.currentUser
+        const { sendEmailVerification } = await import("firebase/auth");
+        await sendEmailVerification(credential.user);
+        
+        setError("Account created! A verification link has been sent to your email. Please verify your email before proceeding.");
+        // We log them out immediately so they are forced to verify before actually using the app
+        auth.signOut();
+        setMode("login");
       } else {
         const credential = await signInWithEmailAndPassword(auth, email, password);
-        await saveProfile(credential.user.uid, { name: credential.user.displayName || "", email: credential.user.email || email });
+        if (!credential.user.emailVerified) {
+          setError("Please verify your email address. Check your inbox for the verification link.");
+          auth.signOut();
+        } else {
+          await saveProfile(credential.user.uid, { name: credential.user.displayName || "", email: credential.user.email || email });
+          onClose();
+        }
       }
-      onClose();
     } catch (authError) {
       setError(getAuthErrorMessage(authError));
     } finally {
@@ -91,9 +106,13 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 
         <form onSubmit={submit} className="auth-form">
           {mode === "signup" && <label>Name<input value={name} onChange={(event) => setName(event.target.value)} required autoComplete="name" /></label>}
-          <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" /></label>
+          
+          <label>Email
+            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" />
+          </label>
+
           <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>
-          {error && <p className="auth-error" role="alert">{error}</p>}
+          {error && <p className="auth-error" role="alert" style={{ color: error.includes("Account created") ? "var(--gold)" : "#d78979" }}>{error}</p>}
           <button className="auth-submit" type="submit" disabled={loading}>{loading ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"}</button>
         </form>
 
