@@ -4,6 +4,11 @@ import { Resend } from 'resend';
 import { products } from '../../src/data/products.js';
 
 export function getServerEnv() {
+  let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY || '';
+  if (privateKey.startsWith('"') && privateKey.endsWith('"')) privateKey = privateKey.slice(1, -1);
+  if (privateKey.startsWith("'") && privateKey.endsWith("'")) privateKey = privateKey.slice(1, -1);
+  privateKey = privateKey.replace(/\\n/g, '\n').trim();
+
   return {
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || '',
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || '',
@@ -12,7 +17,7 @@ export function getServerEnv() {
     RESEND_CONTACT_TO_EMAIL: process.env.RESEND_CONTACT_TO_EMAIL || '',
     FIREBASE_ADMIN_PROJECT_ID: process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID || '',
     FIREBASE_ADMIN_CLIENT_EMAIL: process.env.FIREBASE_ADMIN_CLIENT_EMAIL || '',
-    FIREBASE_ADMIN_PRIVATE_KEY: (process.env.FIREBASE_ADMIN_PRIVATE_KEY || '').replace(/\\n/g, '\n').trim(),
+    FIREBASE_ADMIN_PRIVATE_KEY: privateKey,
     APP_URL: process.env.APP_URL || 'http://localhost:8443',
   };
 }

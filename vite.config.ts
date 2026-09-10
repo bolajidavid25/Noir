@@ -344,7 +344,11 @@ function stripeWebhookPlugin(env: Record<string, string>): Plugin {
 function getFirebaseAdmin(env: Record<string, string>) {
   const projectId = env.FIREBASE_ADMIN_PROJECT_ID || env.VITE_FIREBASE_PROJECT_ID
   const clientEmail = env.FIREBASE_ADMIN_CLIENT_EMAIL?.trim()
-  const privateKey = env.FIREBASE_ADMIN_PRIVATE_KEY?.trim().replace(/\\n/g, '\n')
+  
+  let privateKey = env.FIREBASE_ADMIN_PRIVATE_KEY?.trim() || ''
+  if (privateKey.startsWith('"') && privateKey.endsWith('"')) privateKey = privateKey.slice(1, -1)
+  if (privateKey.startsWith("'") && privateKey.endsWith("'")) privateKey = privateKey.slice(1, -1)
+  privateKey = privateKey.replace(/\\n/g, '\n')
   if (!projectId || !clientEmail || !privateKey) return null
   const app = getApps()[0] || initializeAdminApp({ credential: cert({ projectId, clientEmail, privateKey }) })
   return { auth: getAdminAuth(app), firestore: getAdminFirestore(app) }
