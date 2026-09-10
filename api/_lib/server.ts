@@ -25,7 +25,18 @@ export function getServerEnv() {
 export async function getFirebaseAdmin(env: NodeJS.ProcessEnv) {
   const projectId = env.FIREBASE_ADMIN_PROJECT_ID?.trim();
   const clientEmail = env.FIREBASE_ADMIN_CLIENT_EMAIL?.trim();
-  const privateKey = env.FIREBASE_ADMIN_PRIVATE_KEY?.trim();
+  let privateKey = env.FIREBASE_ADMIN_PRIVATE_KEY?.trim() || '';
+  if (privateKey.startsWith('"') && privateKey.endsWith('"')) privateKey = privateKey.slice(1, -1);
+  if (privateKey.startsWith("'") && privateKey.endsWith("'")) privateKey = privateKey.slice(1, -1);
+  privateKey = privateKey.replace(/\\n/g, '\n');
+  
+  if (privateKey && !privateKey.includes('\n')) {
+    const match = privateKey.match(/-----BEGIN PRIVATE KEY-----\s*(.*?)\s*-----END PRIVATE KEY-----/);
+    if (match) {
+      const body = match[1].replace(/\s+/g, '');
+      privateKey = `-----BEGIN PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join('\n')}\n-----END PRIVATE KEY-----\n`;
+    }
+  }
   if (!projectId || !clientEmail || !privateKey) return null;
   const [{ cert, getApps, initializeApp: initializeAdminApp }, { getAuth: getAdminAuth }, { getFirestore: getAdminFirestore }] = await Promise.all([
     import('firebase-admin/app'),

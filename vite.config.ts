@@ -349,6 +349,14 @@ function getFirebaseAdmin(env: Record<string, string>) {
   if (privateKey.startsWith('"') && privateKey.endsWith('"')) privateKey = privateKey.slice(1, -1)
   if (privateKey.startsWith("'") && privateKey.endsWith("'")) privateKey = privateKey.slice(1, -1)
   privateKey = privateKey.replace(/\\n/g, '\n')
+  
+  if (privateKey && !privateKey.includes('\n')) {
+    const match = privateKey.match(/-----BEGIN PRIVATE KEY-----\s*(.*?)\s*-----END PRIVATE KEY-----/)
+    if (match) {
+      const body = match[1].replace(/\s+/g, '')
+      privateKey = `-----BEGIN PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join('\n')}\n-----END PRIVATE KEY-----\n`
+    }
+  }
   if (!projectId || !clientEmail || !privateKey) return null
   const app = getApps()[0] || initializeAdminApp({ credential: cert({ projectId, clientEmail, privateKey }) })
   return { auth: getAdminAuth(app), firestore: getAdminFirestore(app) }
