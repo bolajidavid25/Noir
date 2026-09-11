@@ -6,6 +6,7 @@ import AuthModal from "./components/AuthModal";
 import PaymentSuccessModal from "./components/PaymentSuccessModal";
 import CartDrawer from "./components/CartDrawer";
 import type { CartItem } from "./components/CartDrawer";
+import { ChatWidget } from "./components/ChatWidget";
 import HomePage from "./pages/HomePage";
 import AllProductsPage from "./pages/AllProductsPage";
 import CheckoutPage from "./pages/CheckoutPage";
@@ -144,6 +145,7 @@ export default function App() {
           <AccountPage user={user} onAddToCart={addToCart} onSignOut={() => signOut(auth)} onBack={() => handleSetPage("home")} />
         ) : null}
       </div>
+      <ChatWidget />
     </div>
   );
 }

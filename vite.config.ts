@@ -1,27 +1,39 @@
-import { defineConfig, loadEnv, type HtmlTagDescriptor, type Plugin } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import path from 'node:path'
-import crypto from 'node:crypto'
-import Stripe from 'stripe'
-import { Resend } from 'resend'
-import { cert, getApps, initializeApp as initializeAdminApp } from 'firebase-admin/app'
-import { getAuth as getAdminAuth } from 'firebase-admin/auth'
-import { getFirestore as getAdminFirestore, FieldValue } from 'firebase-admin/firestore'
-import { products } from './src/data/products'
+import {
+  defineConfig,
+  loadEnv,
+  type HtmlTagDescriptor,
+  type Plugin,
+} from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import path from "node:path";
+import crypto from "node:crypto";
+import Stripe from "stripe";
+import { Resend } from "resend";
+import {
+  cert,
+  getApps,
+  initializeApp as initializeAdminApp,
+} from "firebase-admin/app";
+import { getAuth as getAdminAuth } from "firebase-admin/auth";
+import {
+  getFirestore as getAdminFirestore,
+  FieldValue,
+} from "firebase-admin/firestore";
+import { products } from "./src/data/products";
 
-const siteConfiguration: FigmaSiteConfiguration = {}
+const siteConfiguration: FigmaSiteConfiguration = {};
 
 // Vite config — https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
+  const env = loadEnv(mode, process.cwd(), "");
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
-  const emitSourcemaps = mode === 'development'
+  const emitSourcemaps = mode === "development";
 
   return {
-    base: env.FIGMA_PUBLIC_URL ? `${env.FIGMA_PUBLIC_URL}/` : '/',
+    base: env.FIGMA_PUBLIC_URL ? `${env.FIGMA_PUBLIC_URL}/` : "/",
     build: {
-      sourcemap: emitSourcemaps ? 'inline' : false,
+      sourcemap: emitSourcemaps ? "inline" : false,
       minify: !emitSourcemaps,
     },
     plugins: [
@@ -31,511 +43,716 @@ export default defineConfig(({ mode }) => {
       stripeCheckoutPlugin(env),
       emailVerificationPlugin(env),
       contactMessagePlugin(env),
+      chatPlugin(env),
       stripeWebhookPlugin(env),
       figmaErrorOverlayReplay(),
       figmaReactRefreshBoundaryFallback(),
-      figmaMakeKitPlugin({ storiesGlob: '/src/**/*.stories.{ts,tsx,js,jsx}' }),
+      figmaMakeKitPlugin({ storiesGlob: "/src/**/*.stories.{ts,tsx,js,jsx}" }),
     ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        "@": path.resolve(__dirname, "./src"),
       },
     },
     server: {
-      host: '0.0.0.0',
-      port: parseInt(env.PORT || '8443'),
+      host: "0.0.0.0",
+      port: parseInt(env.PORT || "8443"),
       strictPort: true,
-      watch: { ignored: ['**/.figma/**'] },
+      watch: { ignored: ["**/.figma/**"] },
     },
     preview: {
-      host: '0.0.0.0',
-      port: parseInt(env.PORT || '8443'),
+      host: "0.0.0.0",
+      port: parseInt(env.PORT || "8443"),
     },
-  }
-})
+  };
+});
 
 function stripeCheckoutPlugin(env: Record<string, string>): Plugin {
   return {
-    name: 'stripe-checkout-api',
-    apply: 'serve',
+    name: "stripe-checkout-api",
+    apply: "serve",
     configureServer(server) {
-      server.middlewares.use('/api/create-checkout-session', async (req, res) => {
-        if (req.method !== 'POST') {
-          res.statusCode = 405
-          res.setHeader('Allow', 'POST')
-          res.end(JSON.stringify({ error: 'Method not allowed.' }))
-          return
-        }
-
-        const secretKey = env.STRIPE_SECRET_KEY
-        if (!secretKey) {
-          res.statusCode = 503
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ error: 'Stripe is not configured. Add STRIPE_SECRET_KEY to .env.local.' }))
-          return
-        }
-
-        try {
-          const body = await readJsonBody(req)
-          const firebaseAdmin = getFirebaseAdmin(env)
-          const idToken = typeof body.idToken === 'string' ? body.idToken : ''
-          
-          let firebaseUid = 'guest'
-          let firebaseEmail = typeof body.email === 'string' ? body.email : ''
-          
-          if (idToken && firebaseAdmin) {
-            try {
-              const verifiedUser = await firebaseAdmin.auth.verifyIdToken(idToken)
-              firebaseUid = verifiedUser.uid
-              if (verifiedUser.email) {
-                firebaseEmail = verifiedUser.email
-              }
-            } catch (err) {
-              // Ignore token verification errors to allow fallback to guest checkout
-            }
+      server.middlewares.use(
+        "/api/create-checkout-session",
+        async (req, res) => {
+          if (req.method !== "POST") {
+            res.statusCode = 405;
+            res.setHeader("Allow", "POST");
+            res.end(JSON.stringify({ error: "Method not allowed." }));
+            return;
           }
-          const requestedItems = Array.isArray(body.items) ? body.items : []
-          const lineItems = requestedItems.map((item: { id?: unknown; qty?: unknown }) => {
-            const product = products.find((candidate) => candidate.id === Number(item.id))
-            const quantity = Math.floor(Number(item.qty))
 
-            if (!product || !Number.isInteger(quantity) || quantity < 1 || quantity > 20) {
-              throw new Error('One or more cart items are invalid.')
+          const secretKey = env.STRIPE_SECRET_KEY;
+          if (!secretKey) {
+            res.statusCode = 503;
+            res.setHeader("Content-Type", "application/json");
+            res.end(
+              JSON.stringify({
+                error:
+                  "Stripe is not configured. Add STRIPE_SECRET_KEY to .env.local.",
+              }),
+            );
+            return;
+          }
+
+          try {
+            const body = await readJsonBody(req);
+            const firebaseAdmin = getFirebaseAdmin(env);
+            const idToken =
+              typeof body.idToken === "string" ? body.idToken : "";
+
+            let firebaseUid = "guest";
+            let firebaseEmail =
+              typeof body.email === "string" ? body.email : "";
+
+            if (idToken && firebaseAdmin) {
+              try {
+                const verifiedUser =
+                  await firebaseAdmin.auth.verifyIdToken(idToken);
+                firebaseUid = verifiedUser.uid;
+                if (verifiedUser.email) {
+                  firebaseEmail = verifiedUser.email;
+                }
+              } catch (err) {
+                // Ignore token verification errors to allow fallback to guest checkout
+              }
             }
+            const requestedItems = Array.isArray(body.items) ? body.items : [];
+            const lineItems = requestedItems.map(
+              (item: { id?: unknown; qty?: unknown }) => {
+                const product = products.find(
+                  (candidate) => candidate.id === Number(item.id),
+                );
+                const quantity = Math.floor(Number(item.qty));
 
-            return {
-              price_data: {
-                currency: 'usd',
-                product_data: {
-                  name: product.name,
-                  description: product.category,
-                  images: /^https:\/\//.test(product.image) ? [product.image] : undefined,
-                },
-                unit_amount: Math.round(product.price * 100),
+                if (
+                  !product ||
+                  !Number.isInteger(quantity) ||
+                  quantity < 1 ||
+                  quantity > 20
+                ) {
+                  throw new Error("One or more cart items are invalid.");
+                }
+
+                return {
+                  price_data: {
+                    currency: "usd",
+                    product_data: {
+                      name: product.name,
+                      description: product.category,
+                      images: /^https:\/\//.test(product.image)
+                        ? [product.image]
+                        : undefined,
+                    },
+                    unit_amount: Math.round(product.price * 100),
+                  },
+                  quantity,
+                };
               },
-              quantity,
-            }
-          })
+            );
 
-          if (lineItems.length === 0) throw new Error('Your cart is empty.')
+            if (lineItems.length === 0) throw new Error("Your cart is empty.");
 
-          const origin = env.APP_URL || `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host || 'localhost:8443'}`
-          const stripe = new Stripe(secretKey)
-          const session = await stripe.checkout.sessions.create({
-            mode: 'payment',
-            line_items: lineItems,
-            customer_email: firebaseEmail || undefined,
-            shipping_address_collection: {
-              allowed_countries: ['GB', 'US', 'FR', 'IT', 'DE'],
-            },
-            shipping_options: [
-              {
-                shipping_rate_data: {
-                  type: 'fixed_amount',
-                  fixed_amount: { amount: 2500, currency: 'usd' },
-                  display_name: 'Standard delivery',
-                  delivery_estimate: { minimum: { unit: 'business_day', value: 3 }, maximum: { unit: 'business_day', value: 6 } },
-                },
+            const origin =
+              env.APP_URL ||
+              `${req.headers["x-forwarded-proto"] || "http"}://${req.headers.host || "localhost:8443"}`;
+            const stripe = new Stripe(secretKey);
+            const session = await stripe.checkout.sessions.create({
+              mode: "payment",
+              line_items: lineItems,
+              customer_email: firebaseEmail || undefined,
+              shipping_address_collection: {
+                allowed_countries: ["GB", "US", "FR", "IT", "DE"],
               },
-            ],
-            metadata: {
-              firebaseUid,
-              firebaseEmail,
-            },
-            success_url: `${origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${origin}/?checkout=cancelled`,
-          })
+              shipping_options: [
+                {
+                  shipping_rate_data: {
+                    type: "fixed_amount",
+                    fixed_amount: { amount: 2500, currency: "usd" },
+                    display_name: "Standard delivery",
+                    delivery_estimate: {
+                      minimum: { unit: "business_day", value: 3 },
+                      maximum: { unit: "business_day", value: 6 },
+                    },
+                  },
+                },
+              ],
+              metadata: {
+                firebaseUid,
+                firebaseEmail,
+              },
+              success_url: `${origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+              cancel_url: `${origin}/?checkout=cancelled`,
+            });
 
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ url: session.url }))
-        } catch (error) {
-          res.statusCode = 400
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Unable to create checkout session.' }))
-        }
-      })
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ url: session.url }));
+          } catch (error) {
+            res.statusCode = 400;
+            res.setHeader("Content-Type", "application/json");
+            res.end(
+              JSON.stringify({
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "Unable to create checkout session.",
+              }),
+            );
+          }
+        },
+      );
     },
-  }
+  };
 }
 
-const verificationCodes = new Map<string, { code: string; expiresAt: number }>()
+const verificationCodes = new Map<
+  string,
+  { code: string; expiresAt: number }
+>();
 
 function contactMessagePlugin(env: Record<string, string>): Plugin {
   return {
-    name: 'resend-contact-message-api',
-    apply: 'serve',
+    name: "resend-contact-message-api",
+    apply: "serve",
     configureServer(server) {
-      server.middlewares.use('/api/contact-message', async (req, res) => {
-        if (req.method !== 'POST') {
-          res.statusCode = 405
-          res.setHeader('Allow', 'POST')
-          res.end(JSON.stringify({ error: 'Method not allowed.' }))
-          return
+      server.middlewares.use("/api/contact-message", async (req, res) => {
+        if (req.method !== "POST") {
+          res.statusCode = 405;
+          res.setHeader("Allow", "POST");
+          res.end(JSON.stringify({ error: "Method not allowed." }));
+          return;
         }
 
         try {
-          const body = await readJsonBody(req)
-          const name = typeof body.name === 'string' ? body.name.trim() : ''
-          const email = typeof body.email === 'string' ? body.email.trim() : ''
-          const subject = typeof body.subject === 'string' ? body.subject.trim() : ''
-          const message = typeof body.message === 'string' ? body.message.trim() : ''
-          if (!name || !/^\S+@\S+\.\S+$/.test(email) || !subject || !message) throw new Error('Please complete every field before sending your message.')
-          if (name.length > 120 || email.length > 200 || subject.length > 200 || message.length > 5000) throw new Error('One or more fields are too long.')
-          if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) throw new Error('Email delivery is not configured.')
+          const body = await readJsonBody(req);
+          const name = typeof body.name === "string" ? body.name.trim() : "";
+          const email = typeof body.email === "string" ? body.email.trim() : "";
+          const subject =
+            typeof body.subject === "string" ? body.subject.trim() : "";
+          const message =
+            typeof body.message === "string" ? body.message.trim() : "";
+          if (!name || !/^\S+@\S+\.\S+$/.test(email) || !subject || !message)
+            throw new Error(
+              "Please complete every field before sending your message.",
+            );
+          if (
+            name.length > 120 ||
+            email.length > 200 ||
+            subject.length > 200 ||
+            message.length > 5000
+          )
+            throw new Error("One or more fields are too long.");
+          if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL)
+            throw new Error("Email delivery is not configured.");
 
-          const resend = new Resend(env.RESEND_API_KEY)
+          const resend = new Resend(env.RESEND_API_KEY);
           const result = await resend.emails.send({
             from: env.RESEND_FROM_EMAIL,
-            to: env.RESEND_CONTACT_TO_EMAIL || 'Bolajidavid05@gmail.com',
+            to: env.RESEND_CONTACT_TO_EMAIL || "Bolajidavid05@gmail.com",
             replyTo: email,
             subject: `NŌIR contact: ${subject}`,
-            html: emailLayout(`Message from ${escapeHtml(name)}`, `<strong style="color:#b8965a">${escapeHtml(subject)}</strong><br><br>${escapeHtml(message).replace(/\n/g, '<br>')}<br><br><span style="font-size:12px">Reply directly to this email to reach ${escapeHtml(email)}.</span>`),
-          })
-          if (result.error) throw new Error(result.error.message)
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ sent: true }))
+            html: emailLayout(
+              `Message from ${escapeHtml(name)}`,
+              `<strong style="color:#b8965a">${escapeHtml(subject)}</strong><br><br>${escapeHtml(message).replace(/\n/g, "<br>")}<br><br><span style="font-size:12px">Reply directly to this email to reach ${escapeHtml(email)}.</span>`,
+            ),
+          });
+          if (result.error) throw new Error(result.error.message);
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ sent: true }));
         } catch (error) {
-          res.statusCode = 400
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Unable to send your message.' }))
+          res.statusCode = 400;
+          res.setHeader("Content-Type", "application/json");
+          res.end(
+            JSON.stringify({
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Unable to send your message.",
+            }),
+          );
         }
-      })
+      });
     },
-  }
+  };
 }
 
 function emailVerificationPlugin(env: Record<string, string>): Plugin {
   return {
-    name: 'resend-email-verification-api',
-    apply: 'serve',
+    name: "resend-email-verification-api",
+    apply: "serve",
     configureServer(server) {
-      server.middlewares.use('/api/send-verification-code', async (req, res) => {
-        if (req.method !== 'POST') {
-          res.statusCode = 405
-          res.setHeader('Allow', 'POST')
-          res.end(JSON.stringify({ error: 'Method not allowed.' }))
-          return
-        }
-
-        try {
-          const body = await readJsonBody(req)
-          const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
-          if (!/^\S+@\S+\.\S+$/.test(email)) throw new Error('Enter a valid email address.')
-          if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
-            res.statusCode = 503
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ error: 'Email verification is not configured. Add RESEND_API_KEY and RESEND_FROM_EMAIL.' }))
-            return
+      server.middlewares.use(
+        "/api/send-verification-code",
+        async (req, res) => {
+          if (req.method !== "POST") {
+            res.statusCode = 405;
+            res.setHeader("Allow", "POST");
+            res.end(JSON.stringify({ error: "Method not allowed." }));
+            return;
           }
 
-          const code = crypto.randomInt(100000, 1000000).toString()
-          verificationCodes.set(email, { code, expiresAt: Date.now() + 10 * 60 * 1000 })
-          const resend = new Resend(env.RESEND_API_KEY)
-          const result = await resend.emails.send({
-            from: env.RESEND_FROM_EMAIL,
-            to: email,
-            subject: 'Your NŌIR verification code',
-            html: emailLayout('Verify your email', `Your NŌIR verification code is <strong style="font-size:28px;letter-spacing:8px;color:#b8965a">${code}</strong><br><br>This code expires in 10 minutes. If you did not request it, you can safely ignore this message.`),
-          })
-          if (result.error) throw new Error(result.error.message)
+          try {
+            const body = await readJsonBody(req);
+            const email =
+              typeof body.email === "string"
+                ? body.email.trim().toLowerCase()
+                : "";
+            if (!/^\S+@\S+\.\S+$/.test(email))
+              throw new Error("Enter a valid email address.");
+            if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
+              res.statusCode = 503;
+              res.setHeader("Content-Type", "application/json");
+              res.end(
+                JSON.stringify({
+                  error:
+                    "Email verification is not configured. Add RESEND_API_KEY and RESEND_FROM_EMAIL.",
+                }),
+              );
+              return;
+            }
 
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ sent: true }))
-        } catch (error) {
-          res.statusCode = 400
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Unable to send verification email.' }))
-        }
-      })
+            const code = crypto.randomInt(100000, 1000000).toString();
+            verificationCodes.set(email, {
+              code,
+              expiresAt: Date.now() + 10 * 60 * 1000,
+            });
+            const resend = new Resend(env.RESEND_API_KEY);
+            const result = await resend.emails.send({
+              from: env.RESEND_FROM_EMAIL,
+              to: email,
+              subject: "Your NŌIR verification code",
+              html: emailLayout(
+                "Verify your email",
+                `Your NŌIR verification code is <strong style="font-size:28px;letter-spacing:8px;color:#b8965a">${code}</strong><br><br>This code expires in 10 minutes. If you did not request it, you can safely ignore this message.`,
+              ),
+            });
+            if (result.error) throw new Error(result.error.message);
 
-      server.middlewares.use('/api/verify-email-code', async (req, res) => {
-        if (req.method !== 'POST') {
-          res.statusCode = 405
-          res.setHeader('Allow', 'POST')
-          res.end(JSON.stringify({ error: 'Method not allowed.' }))
-          return
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ sent: true }));
+          } catch (error) {
+            res.statusCode = 400;
+            res.setHeader("Content-Type", "application/json");
+            res.end(
+              JSON.stringify({
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "Unable to send verification email.",
+              }),
+            );
+          }
+        },
+      );
+
+      server.middlewares.use("/api/verify-email-code", async (req, res) => {
+        if (req.method !== "POST") {
+          res.statusCode = 405;
+          res.setHeader("Allow", "POST");
+          res.end(JSON.stringify({ error: "Method not allowed." }));
+          return;
         }
 
         try {
-          const body = await readJsonBody(req)
-          const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
-          const code = typeof body.code === 'string' ? body.code.trim() : ''
-          const saved = verificationCodes.get(email)
-          const verified = Boolean(saved && saved.expiresAt > Date.now() && saved.code === code)
-          if (!verified) throw new Error('That code is incorrect or has expired.')
-          verificationCodes.delete(email)
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ verified: true }))
+          const body = await readJsonBody(req);
+          const email =
+            typeof body.email === "string"
+              ? body.email.trim().toLowerCase()
+              : "";
+          const code = typeof body.code === "string" ? body.code.trim() : "";
+          const saved = verificationCodes.get(email);
+          const verified = Boolean(
+            saved && saved.expiresAt > Date.now() && saved.code === code,
+          );
+          if (!verified)
+            throw new Error("That code is incorrect or has expired.");
+          verificationCodes.delete(email);
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ verified: true }));
         } catch (error) {
-          res.statusCode = 400
-          res.setHeader('Content-Type', 'application/json')
-          res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Unable to verify email.' }))
+          res.statusCode = 400;
+          res.setHeader("Content-Type", "application/json");
+          res.end(
+            JSON.stringify({
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Unable to verify email.",
+            }),
+          );
         }
-      })
+      });
     },
-  }
+  };
 }
 
 function stripeWebhookPlugin(env: Record<string, string>): Plugin {
   return {
-    name: 'stripe-order-confirmation-webhook',
-    apply: 'serve',
+    name: "stripe-order-confirmation-webhook",
+    apply: "serve",
     configureServer(server) {
-      server.middlewares.use('/api/stripe-webhook', async (req, res) => {
-        if (req.method !== 'POST') {
-          res.statusCode = 405
-          res.end()
-          return
+      server.middlewares.use("/api/stripe-webhook", async (req, res) => {
+        if (req.method !== "POST") {
+          res.statusCode = 405;
+          res.end();
+          return;
         }
-        if (!env.STRIPE_SECRET_KEY || !env.STRIPE_WEBHOOK_SECRET || !env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) {
-          res.statusCode = 503
-          res.end('Webhook email integration is not configured.')
-          return
+        if (
+          !env.STRIPE_SECRET_KEY ||
+          !env.STRIPE_WEBHOOK_SECRET ||
+          !env.RESEND_API_KEY ||
+          !env.RESEND_FROM_EMAIL
+        ) {
+          res.statusCode = 503;
+          res.end("Webhook email integration is not configured.");
+          return;
         }
 
         try {
-          const stripe = new Stripe(env.STRIPE_SECRET_KEY)
-          const event = stripe.webhooks.constructEvent(await readRawBody(req), req.headers['stripe-signature'] || '', env.STRIPE_WEBHOOK_SECRET)
-          if (event.type === 'checkout.session.completed') {
-            const session = event.data.object as Stripe.Checkout.Session
-            const firebaseUid = session.metadata?.firebaseUid
-            const firebaseAdmin = getFirebaseAdmin(env)
-            if (!firebaseUid || !firebaseAdmin) throw new Error('Firebase transaction storage is not configured.')
-            const email = session.customer_details?.email || session.customer_email
-            const items = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100 })
-            await firebaseAdmin.firestore.collection('users').doc(firebaseUid).collection('transactions').doc(session.id).set({
-              referenceId: session.id,
-              stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
-              status: session.payment_status,
-              amountTotal: session.amount_total || 0,
-              currency: session.currency || 'usd',
-              customerEmail: email || null,
-              items: items.data.map((item) => ({ name: item.description || 'NŌIR piece', quantity: item.quantity || 1, amountTotal: item.amount_total || 0 })),
-              createdAt: FieldValue.serverTimestamp(),
-              updatedAt: FieldValue.serverTimestamp(),
-            })
+          const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+          const event = stripe.webhooks.constructEvent(
+            await readRawBody(req),
+            req.headers["stripe-signature"] || "",
+            env.STRIPE_WEBHOOK_SECRET,
+          );
+          if (event.type === "checkout.session.completed") {
+            const session = event.data.object as Stripe.Checkout.Session;
+            const firebaseUid = session.metadata?.firebaseUid;
+            const firebaseAdmin = getFirebaseAdmin(env);
+            if (!firebaseUid || !firebaseAdmin)
+              throw new Error(
+                "Firebase transaction storage is not configured.",
+              );
+            const email =
+              session.customer_details?.email || session.customer_email;
+            const items = await stripe.checkout.sessions.listLineItems(
+              session.id,
+              { limit: 100 },
+            );
+            await firebaseAdmin.firestore
+              .collection("users")
+              .doc(firebaseUid)
+              .collection("transactions")
+              .doc(session.id)
+              .set({
+                referenceId: session.id,
+                stripePaymentIntentId:
+                  typeof session.payment_intent === "string"
+                    ? session.payment_intent
+                    : null,
+                status: session.payment_status,
+                amountTotal: session.amount_total || 0,
+                currency: session.currency || "usd",
+                customerEmail: email || null,
+                items: items.data.map((item) => ({
+                  name: item.description || "NŌIR piece",
+                  quantity: item.quantity || 1,
+                  amountTotal: item.amount_total || 0,
+                })),
+                createdAt: FieldValue.serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp(),
+              });
             if (email) {
-              const itemRows = items.data.map((item) => `<tr><td style="padding:8px 0;color:#f2ede6">${item.description || 'NŌIR piece'}</td><td style="padding:8px 0;text-align:right;color:#b8965a">${item.quantity || 1} × ${formatAmount(item.amount_total || 0)}</td></tr>`).join('')
-              const resend = new Resend(env.RESEND_API_KEY)
+              const itemRows = items.data
+                .map(
+                  (item) =>
+                    `<tr><td style="padding:8px 0;color:#f2ede6">${item.description || "NŌIR piece"}</td><td style="padding:8px 0;text-align:right;color:#b8965a">${item.quantity || 1} × ${formatAmount(item.amount_total || 0)}</td></tr>`,
+                )
+                .join("");
+              const resend = new Resend(env.RESEND_API_KEY);
               const result = await resend.emails.send({
                 from: env.RESEND_FROM_EMAIL,
                 to: email,
-                subject: 'Your NŌIR order is confirmed',
-                html: emailLayout('Order confirmed', `Thank you for choosing NŌIR. Your order is being prepared with care.<br><br><table style="width:100%;border-top:1px solid #3b3630;border-bottom:1px solid #3b3630">${itemRows}</table><br><strong style="color:#f2ede6">Total: ${formatAmount(session.amount_total || 0)}</strong>`),
-              })
-              if (result.error) throw new Error(result.error.message)
+                subject: "Your NŌIR order is confirmed",
+                html: emailLayout(
+                  "Order confirmed",
+                  `Thank you for choosing NŌIR. Your order is being prepared with care.<br><br><table style="width:100%;border-top:1px solid #3b3630;border-bottom:1px solid #3b3630">${itemRows}</table><br><strong style="color:#f2ede6">Total: ${formatAmount(session.amount_total || 0)}</strong>`,
+                ),
+              });
+              if (result.error) throw new Error(result.error.message);
             }
           }
-          res.statusCode = 200
-          res.end(JSON.stringify({ received: true }))
+          res.statusCode = 200;
+          res.end(JSON.stringify({ received: true }));
         } catch (error) {
-          res.statusCode = 400
-          res.end(error instanceof Error ? error.message : 'Invalid webhook.')
+          res.statusCode = 400;
+          res.end(error instanceof Error ? error.message : "Invalid webhook.");
         }
-      })
+      });
     },
-  }
+  };
 }
 
 function getFirebaseAdmin(env: Record<string, string>) {
-  const projectId = env.FIREBASE_ADMIN_PROJECT_ID || env.VITE_FIREBASE_PROJECT_ID
-  const clientEmail = env.FIREBASE_ADMIN_CLIENT_EMAIL?.trim()
-  
-  let privateKey = env.FIREBASE_ADMIN_PRIVATE_KEY?.trim() || ''
-  if (privateKey.startsWith('"') && privateKey.endsWith('"')) privateKey = privateKey.slice(1, -1)
-  if (privateKey.startsWith("'") && privateKey.endsWith("'")) privateKey = privateKey.slice(1, -1)
-  privateKey = privateKey.replace(/\\n/g, '\n')
-  
+  const projectId =
+    env.FIREBASE_ADMIN_PROJECT_ID || env.VITE_FIREBASE_PROJECT_ID;
+  const clientEmail = env.FIREBASE_ADMIN_CLIENT_EMAIL?.trim();
+
+  let privateKey = env.FIREBASE_ADMIN_PRIVATE_KEY?.trim() || "";
+  if (privateKey.startsWith('"') && privateKey.endsWith('"'))
+    privateKey = privateKey.slice(1, -1);
+  if (privateKey.startsWith("'") && privateKey.endsWith("'"))
+    privateKey = privateKey.slice(1, -1);
+  privateKey = privateKey.replace(/\\n/g, "\n");
+
   if (privateKey) {
-    const match = privateKey.match(/-----BEGIN PRIVATE KEY-----\s*(.*?)\s*-----END PRIVATE KEY-----/s)
+    const match = privateKey.match(
+      /-----BEGIN PRIVATE KEY-----\s*(.*?)\s*-----END PRIVATE KEY-----/s,
+    );
     if (match) {
-      const body = match[1].replace(/\s+/g, '')
-      privateKey = `-----BEGIN PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join('\n')}\n-----END PRIVATE KEY-----\n`
+      const body = match[1].replace(/\s+/g, "");
+      privateKey = `-----BEGIN PRIVATE KEY-----\n${body.match(/.{1,64}/g)?.join("\n")}\n-----END PRIVATE KEY-----\n`;
     }
   }
-  if (!projectId || !clientEmail || !privateKey) return null
-  const app = getApps()[0] || initializeAdminApp({ credential: cert({ projectId, clientEmail, privateKey }) })
-  return { auth: getAdminAuth(app), firestore: getAdminFirestore(app) }
+  if (!projectId || !clientEmail || !privateKey) return null;
+  const app =
+    getApps()[0] ||
+    initializeAdminApp({
+      credential: cert({ projectId, clientEmail, privateKey }),
+    });
+  return { auth: getAdminAuth(app), firestore: getAdminFirestore(app) };
 }
 
-function readRawBody(req: import('node:http').IncomingMessage): Promise<string> {
+function readRawBody(
+  req: import("node:http").IncomingMessage,
+): Promise<string> {
   return new Promise((resolve, reject) => {
-    let raw = ''
-    req.setEncoding('utf8')
-    req.on('data', (chunk) => { raw += chunk })
-    req.on('end', () => resolve(raw))
-    req.on('error', reject)
-  })
+    let raw = "";
+    req.setEncoding("utf8");
+    req.on("data", (chunk) => {
+      raw += chunk;
+    });
+    req.on("end", () => resolve(raw));
+    req.on("error", reject);
+  });
 }
 
 function emailLayout(title: string, content: string): string {
-  return `<div style="background:#0c0b09;padding:40px 20px;font-family:Arial,sans-serif;color:#aaa"><div style="max-width:560px;margin:auto;border:1px solid #3b3630;padding:36px;background:#151310"><div style="color:#b8965a;letter-spacing:6px;font-size:12px;margin-bottom:28px">NŌIR</div><h1 style="font-family:Georgia,serif;font-weight:normal;color:#f2ede6;font-size:32px">${title}</h1><p style="line-height:1.8">${content}</p><p style="border-top:1px solid #3b3630;padding-top:20px;margin-top:32px;font-size:12px">noir-studio.com</p></div></div>`
+  return `<div style="background:#0c0b09;padding:40px 20px;font-family:Arial,sans-serif;color:#aaa"><div style="max-width:560px;margin:auto;border:1px solid #3b3630;padding:36px;background:#151310"><div style="color:#b8965a;letter-spacing:6px;font-size:12px;margin-bottom:28px">NŌIR</div><h1 style="font-family:Georgia,serif;font-weight:normal;color:#f2ede6;font-size:32px">${title}</h1><p style="line-height:1.8">${content}</p><p style="border-top:1px solid #3b3630;padding-top:20px;margin-top:32px;font-size:12px">noir-studio.com</p></div></div>`;
 }
 
 function escapeHtml(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;')
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function formatAmount(amountInCents: number): string {
-  return `$${(amountInCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+  return `$${(amountInCents / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
 }
 
-function readJsonBody(req: import('node:http').IncomingMessage): Promise<Record<string, unknown>> {
+function readJsonBody(
+  req: import("node:http").IncomingMessage,
+): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
-    let raw = ''
-    req.setEncoding('utf8')
-    req.on('data', (chunk) => {
-      raw += chunk
-      if (raw.length > 100_000) reject(new Error('Request body is too large.'))
-    })
-    req.on('end', () => {
+    let raw = "";
+    req.setEncoding("utf8");
+    req.on("data", (chunk) => {
+      raw += chunk;
+      if (raw.length > 100_000) reject(new Error("Request body is too large."));
+    });
+    req.on("end", () => {
       try {
-        const parsed = JSON.parse(raw || '{}')
-        resolve(parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {})
+        const parsed = JSON.parse(raw || "{}");
+        resolve(
+          parsed && typeof parsed === "object"
+            ? (parsed as Record<string, unknown>)
+            : {},
+        );
       } catch {
-        reject(new Error('Invalid request body.'))
+        reject(new Error("Invalid request body."));
       }
-    })
-    req.on('error', reject)
-  })
+    });
+    req.on("error", reject);
+  });
 }
 
 type FigmaSiteConfiguration = {
-  title?: string
-  description?: string
-  language?: string
+  title?: string;
+  description?: string;
+  language?: string;
   robots?: {
-    index?: boolean
-  }
+    index?: boolean;
+  };
   icons?: {
-    icon?: string
-  }
+    icon?: string;
+  };
   openGraph?: {
-    image?: string
-  }
+    image?: string;
+  };
   analytics?: {
-    googleAnalyticsId?: string
-  }
+    googleAnalyticsId?: string;
+  };
   customScripts?: {
-    headStart?: string
-    headEnd?: string
-    bodyStart?: string
-    bodyEnd?: string
-  }
+    headStart?: string;
+    headEnd?: string;
+    bodyStart?: string;
+    bodyEnd?: string;
+  };
   accessibility?: {
-    addBypassLinks?: boolean
-  }
-}
+    addBypassLinks?: boolean;
+  };
+};
 
 /** Applies /.figma/make/site.json to the generated document shell. */
 function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
   function sanitizeHtmlValue(value: string | undefined): string {
-    return value?.replace(/[^a-zA-Z0-9_-]/g, '') || ''
+    return value?.replace(/[^a-zA-Z0-9_-]/g, "") || "";
   }
   function escapeHtmlText(value: string): string {
-    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
   }
-  function replaceHtmlCommentSlot(html: string, slotName: string, content: string): string {
-    return html.replace(`<!-- ${slotName} -->`, content)
+  function replaceHtmlCommentSlot(
+    html: string,
+    slotName: string,
+    content: string,
+  ): string {
+    return html.replace(`<!-- ${slotName} -->`, content);
   }
 
-  const title = config.title ?? "Figma Make App"
-  const description = config.description ?? ''
-  const favicon = config.icons?.icon ?? ''
-  const socialImage = config.openGraph?.image ?? ''
-  const language = sanitizeHtmlValue(config.language) || 'en'
-  const googleAnalyticsId = sanitizeHtmlValue(config.analytics?.googleAnalyticsId)
-  const headStart = config.customScripts?.headStart ?? ''
-  const headEnd = config.customScripts?.headEnd ?? ''
-  const bodyStart = config.customScripts?.bodyStart ?? ''
-  const bodyEnd = config.customScripts?.bodyEnd ?? ''
-  const robotsTxt = config.robots?.index === false ? 'User-agent: *\nDisallow: /\n' : ''
+  const title = config.title ?? "Figma Make App";
+  const description = config.description ?? "";
+  const favicon = config.icons?.icon ?? "";
+  const socialImage = config.openGraph?.image ?? "";
+  const language = sanitizeHtmlValue(config.language) || "en";
+  const googleAnalyticsId = sanitizeHtmlValue(
+    config.analytics?.googleAnalyticsId,
+  );
+  const headStart = config.customScripts?.headStart ?? "";
+  const headEnd = config.customScripts?.headEnd ?? "";
+  const bodyStart = config.customScripts?.bodyStart ?? "";
+  const bodyEnd = config.customScripts?.bodyEnd ?? "";
+  const robotsTxt =
+    config.robots?.index === false ? "User-agent: *\nDisallow: /\n" : "";
 
   return {
-    name: 'figma-site-configuration',
+    name: "figma-site-configuration",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (!robotsTxt || req.url?.split('?')[0] !== '/robots.txt') return next()
+        if (!robotsTxt || req.url?.split("?")[0] !== "/robots.txt")
+          return next();
 
-        res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-        res.end(robotsTxt)
-      })
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        res.end(robotsTxt);
+      });
     },
     generateBundle() {
-      if (!robotsTxt) return
+      if (!robotsTxt) return;
 
       this.emitFile({
-        type: 'asset',
-        fileName: 'robots.txt',
+        type: "asset",
+        fileName: "robots.txt",
         source: robotsTxt,
-      })
+      });
     },
     transformIndexHtml: {
-      order: 'pre',
+      order: "pre",
       handler(html) {
-        let result = html
-        result = replaceHtmlCommentSlot(result, 'figma:lang', language)
-        result = replaceHtmlCommentSlot(result, 'figma:title', escapeHtmlText(title))
-        result = replaceHtmlCommentSlot(result, 'figma:head-start', headStart)
-        result = replaceHtmlCommentSlot(result, 'figma:head-end', headEnd)
-        result = replaceHtmlCommentSlot(result, 'figma:body-start', bodyStart)
-        result = replaceHtmlCommentSlot(result, 'figma:body-end', bodyEnd)
+        let result = html;
+        result = replaceHtmlCommentSlot(result, "figma:lang", language);
+        result = replaceHtmlCommentSlot(
+          result,
+          "figma:title",
+          escapeHtmlText(title),
+        );
+        result = replaceHtmlCommentSlot(result, "figma:head-start", headStart);
+        result = replaceHtmlCommentSlot(result, "figma:head-end", headEnd);
+        result = replaceHtmlCommentSlot(result, "figma:body-start", bodyStart);
+        result = replaceHtmlCommentSlot(result, "figma:body-end", bodyEnd);
 
-        const tags: HtmlTagDescriptor[] = []
+        const tags: HtmlTagDescriptor[] = [];
         if (description) {
-          tags.push({ tag: 'meta', attrs: { name: 'description', content: description }, injectTo: 'head' })
+          tags.push({
+            tag: "meta",
+            attrs: { name: "description", content: description },
+            injectTo: "head",
+          });
         }
         if (config.robots?.index === false) {
-          tags.push({ tag: 'meta', attrs: { name: 'robots', content: 'noindex, nofollow' }, injectTo: 'head' })
+          tags.push({
+            tag: "meta",
+            attrs: { name: "robots", content: "noindex, nofollow" },
+            injectTo: "head",
+          });
         }
         if (favicon) {
-          tags.push({ tag: 'link', attrs: { rel: 'icon', href: favicon }, injectTo: 'head' })
+          tags.push({
+            tag: "link",
+            attrs: { rel: "icon", href: favicon },
+            injectTo: "head",
+          });
         }
         if (title) {
-          tags.push({ tag: 'meta', attrs: { property: 'og:title', content: title }, injectTo: 'head' })
+          tags.push({
+            tag: "meta",
+            attrs: { property: "og:title", content: title },
+            injectTo: "head",
+          });
         }
         if (description) {
-          tags.push({ tag: 'meta', attrs: { property: 'og:description', content: description }, injectTo: 'head' })
+          tags.push({
+            tag: "meta",
+            attrs: { property: "og:description", content: description },
+            injectTo: "head",
+          });
         }
         if (socialImage) {
           tags.push(
-            { tag: 'meta', attrs: { property: 'og:image', content: socialImage }, injectTo: 'head' },
-            { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' }, injectTo: 'head' },
-            { tag: 'meta', attrs: { name: 'twitter:image', content: socialImage }, injectTo: 'head' },
-          )
+            {
+              tag: "meta",
+              attrs: { property: "og:image", content: socialImage },
+              injectTo: "head",
+            },
+            {
+              tag: "meta",
+              attrs: { name: "twitter:card", content: "summary_large_image" },
+              injectTo: "head",
+            },
+            {
+              tag: "meta",
+              attrs: { name: "twitter:image", content: socialImage },
+              injectTo: "head",
+            },
+          );
         }
 
         if (googleAnalyticsId) {
           tags.push(
             {
-              tag: 'script',
+              tag: "script",
               attrs: {
                 async: true,
                 src: `https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`,
               },
-              injectTo: 'head',
+              injectTo: "head",
             },
             {
-              tag: 'script',
+              tag: "script",
               children: `
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', ${JSON.stringify(googleAnalyticsId)});
 `,
-              injectTo: 'head',
+              injectTo: "head",
             },
-          )
+          );
         }
 
         if (config.accessibility?.addBypassLinks) {
           tags.push(
             {
-              tag: 'style',
+              tag: "style",
               children: `
   .figma-bypass-link {
     position: fixed;
@@ -554,24 +771,24 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
     transform: translateY(0);
   }
 `,
-              injectTo: 'head',
+              injectTo: "head",
             },
             {
-              tag: 'a',
-              attrs: { class: 'figma-bypass-link', href: '#root' },
-              children: 'Skip to content',
-              injectTo: 'body-prepend',
+              tag: "a",
+              attrs: { class: "figma-bypass-link", href: "#root" },
+              children: "Skip to content",
+              injectTo: "body-prepend",
             },
-          )
+          );
         }
 
         return {
           html: result,
           tags,
-        }
+        };
       },
     },
-  }
+  };
 }
 
 /**
@@ -589,32 +806,34 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
  */
 function figmaErrorOverlayReplay(): Plugin {
   return {
-    name: 'figma-error-overlay-replay',
-    apply: 'serve',
+    name: "figma-error-overlay-replay",
+    apply: "serve",
     configureServer(server) {
-      let lastError: object | null = null
+      let lastError: object | null = null;
 
-      const origSend = server.ws.send.bind(server.ws) as (...args: any[]) => void
+      const origSend = server.ws.send.bind(server.ws) as (
+        ...args: any[]
+      ) => void;
       server.ws.send = ((...args: any[]) => {
-        const payload = args[0]
-        if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
-          const type = (payload as { type?: string }).type
-          if (type === 'error') {
-            lastError = payload as object
-          } else if (type === 'update' || type === 'full-reload') {
-            lastError = null
+        const payload = args[0];
+        if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+          const type = (payload as { type?: string }).type;
+          if (type === "error") {
+            lastError = payload as object;
+          } else if (type === "update" || type === "full-reload") {
+            lastError = null;
           }
         }
-        return origSend(...args)
-      }) as typeof server.ws.send
+        return origSend(...args);
+      }) as typeof server.ws.send;
 
-      server.ws.on('connection', (socket) => {
+      server.ws.on("connection", (socket) => {
         if (lastError !== null) {
-          socket.send(JSON.stringify(lastError))
+          socket.send(JSON.stringify(lastError));
         }
-      })
+      });
     },
-  }
+  };
 }
 
 /**
@@ -630,31 +849,34 @@ function figmaErrorOverlayReplay(): Plugin {
  * the old tree mounted until the page is reloaded.
  */
 function figmaReactRefreshBoundaryFallback(): Plugin {
-  const hadRefreshBoundary = new Map<string, boolean>()
-  let sendFullReload: (() => void) | null = null
+  const hadRefreshBoundary = new Map<string, boolean>();
+  let sendFullReload: (() => void) | null = null;
 
   return {
-    name: 'figma-react-refresh-boundary-fallback',
-    apply: 'serve',
-    enforce: 'post',
+    name: "figma-react-refresh-boundary-fallback",
+    apply: "serve",
+    enforce: "post",
     configureServer(server) {
-      sendFullReload = () => server.ws.send({ type: 'full-reload', path: '*' })
+      sendFullReload = () => server.ws.send({ type: "full-reload", path: "*" });
     },
     transform(code, id) {
-      if (!/\.[jt]sx?(?:\?|$)/.test(id) || id.includes('/node_modules/')) return null
+      if (!/\.[jt]sx?(?:\?|$)/.test(id) || id.includes("/node_modules/"))
+        return null;
 
-      const moduleId = id.split('?')[0] ?? id
-      const hasRefreshBoundary = code.includes('registerExportsForReactRefresh')
-      const previousHadRefreshBoundary = hadRefreshBoundary.get(moduleId)
-      hadRefreshBoundary.set(moduleId, hasRefreshBoundary)
+      const moduleId = id.split("?")[0] ?? id;
+      const hasRefreshBoundary = code.includes(
+        "registerExportsForReactRefresh",
+      );
+      const previousHadRefreshBoundary = hadRefreshBoundary.get(moduleId);
+      hadRefreshBoundary.set(moduleId, hasRefreshBoundary);
 
       if (previousHadRefreshBoundary && !hasRefreshBoundary) {
-        queueMicrotask(() => sendFullReload?.())
+        queueMicrotask(() => sendFullReload?.());
       }
 
-      return null
+      return null;
     },
-  }
+  };
 }
 
 /**
@@ -668,12 +890,16 @@ function figmaReactRefreshBoundaryFallback(): Plugin {
  * builds (`vite build`) skip it entirely so the route doesn't leak
  * into shipped bundles.
  */
-function figmaMakeKitPlugin(options: { storiesGlob: string | string[] }): Plugin {
-  const storiesGlob = Array.isArray(options.storiesGlob) ? options.storiesGlob : [options.storiesGlob]
-  const ROUTE = '/.figma/make/kit.html'
-  const VIRTUAL_ID = 'virtual:figma-stories'
-  const RESOLVED_ID = '\0' + VIRTUAL_ID
-  const STORIES_MODULE = `export const stories = import.meta.glob(${JSON.stringify(storiesGlob)})`
+function figmaMakeKitPlugin(options: {
+  storiesGlob: string | string[];
+}): Plugin {
+  const storiesGlob = Array.isArray(options.storiesGlob)
+    ? options.storiesGlob
+    : [options.storiesGlob];
+  const ROUTE = "/.figma/make/kit.html";
+  const VIRTUAL_ID = "virtual:figma-stories";
+  const RESOLVED_ID = "\0" + VIRTUAL_ID;
+  const STORIES_MODULE = `export const stories = import.meta.glob(${JSON.stringify(storiesGlob)})`;
   const HTML_BOOTSTRAP = `<!doctype html>
 <html lang="en">
 <head>
@@ -688,31 +914,121 @@ function figmaMakeKitPlugin(options: { storiesGlob: string | string[] }): Plugin
   window.dispatchEvent(new CustomEvent('figma.ready'))
 </script>
 </body>
-</html>`
+</html>`;
 
   return {
-    name: 'figma-make-kit',
-    apply: 'serve',
+    name: "figma-make-kit",
+    apply: "serve",
     resolveId(id) {
-      if (id === VIRTUAL_ID) return RESOLVED_ID
-      return null
+      if (id === VIRTUAL_ID) return RESOLVED_ID;
+      return null;
     },
     load(id) {
-      if (id !== RESOLVED_ID) return null
-      return STORIES_MODULE
+      if (id !== RESOLVED_ID) return null;
+      return STORIES_MODULE;
     },
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
-        const url = req.url || ''
-        if (url.split('?')[0] !== ROUTE) return next()
+        const url = req.url || "";
+        if (url.split("?")[0] !== ROUTE) return next();
 
         try {
-          res.setHeader('Content-Type', 'text/html')
-          res.end(await server.transformIndexHtml(url, HTML_BOOTSTRAP))
+          res.setHeader("Content-Type", "text/html");
+          res.end(await server.transformIndexHtml(url, HTML_BOOTSTRAP));
         } catch (err) {
-          next(err as Error)
+          next(err as Error);
         }
-      })
+      });
     },
-  }
+  };
+}
+
+function chatPlugin(env: Record<string, string>): Plugin {
+  return {
+    name: "chat-api",
+    apply: "serve",
+    configureServer(server) {
+      server.middlewares.use("/api/chat", async (req, res) => {
+        if (req.method !== "POST") {
+          res.statusCode = 405;
+          return res.end();
+        }
+        try {
+          const body = await readJsonBody(req);
+          if (!env.GEMINI_API_KEY)
+            throw new Error("Gemini API key is missing.");
+          if (
+            !body.messages ||
+            !Array.isArray(body.messages) ||
+            body.messages.length === 0
+          )
+            throw new Error("Invalid messages format.");
+          const { GoogleGenerativeAI } = await import("@google/generative-ai");
+          const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+          const SYSTEM_PROMPT = `You are Onyx, a Gen Z fashionista, stylist, and virtual bestie for NŌIR, an exclusive luxury fashion store.
+Your vibe is iconic, trendy, energetic, and super relatable. You use Gen Z slangs (like "slay", "ate that up", "no cap", "serving looks", "main character energy", "rn", "fr", etc.) naturally but elegantly.
+
+You have access to NŌIR's product catalog. When relevant, you MUST recommend these specific products to the user to help drive sales, hype them up, and mention the price.
+Do not invent products. If they ask about something we don't have, politely pivot to what we do have.
+
+NŌIR's Current Catalog:
+${products.map((p: any) => `- ${p.name} ($${p.price}): ${p.description}`).join("\n")}
+
+Rules:
+1. ALWAYS maintain the Gen Z fashionista persona. Use emojis ✨💅🔥.
+2. IMPORTANT: Keep your responses extremely short and snappy! (1-3 sentences max). This keeps the chat fast and engaging.
+3. Use markdown for bolding (**slay**) and italics.`;
+          let rawHistory = body.messages.slice(0, -1).map((msg: any) => ({
+            role: msg.role === "user" ? "user" : "model",
+            parts: [{ text: msg.content }],
+          }));
+
+          rawHistory = rawHistory.filter(
+            (msg: any) =>
+              !msg.parts[0].text.includes(
+                "I apologize, but I am currently unavailable",
+              ),
+          );
+
+          const strictHistory: any[] = [];
+          for (const msg of rawHistory) {
+            if (strictHistory.length === 0) {
+              if (msg.role === "user") strictHistory.push(msg);
+            } else {
+              if (strictHistory[strictHistory.length - 1].role !== msg.role) {
+                strictHistory.push(msg);
+              } else {
+                strictHistory[strictHistory.length - 1].parts[0].text +=
+                  "\n\n" + msg.parts[0].text;
+              }
+            }
+          }
+
+          let currentMessage = body.messages[body.messages.length - 1].content;
+
+          if (
+            strictHistory.length > 0 &&
+            strictHistory[strictHistory.length - 1].role === "user"
+          ) {
+            const popped = strictHistory.pop();
+            currentMessage = popped.parts[0].text + "\n\n" + currentMessage;
+          }
+
+          const model = genAI.getGenerativeModel({
+            model: "gemini-3.6-flash",
+            systemInstruction: SYSTEM_PROMPT,
+          });
+          const chat = model.startChat({ history: strictHistory });
+          const result = await chat.sendMessage(currentMessage);
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ reply: result.response.text() }));
+        } catch (error: any) {
+          res.statusCode = 500;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ error: error.message }));
+        }
+      });
+    },
+  };
 }
