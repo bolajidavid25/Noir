@@ -51,7 +51,6 @@ export default function CartDrawer({ open, onClose, items, onRemove, onQtyChange
           transition: "transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       >
-        {/* Header */}
         <div style={{ padding: "2rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <p style={{ fontSize: "0.65rem", letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--text-muted)", fontFamily: "'Inter', sans-serif" }}>
@@ -78,7 +77,6 @@ export default function CartDrawer({ open, onClose, items, onRemove, onQtyChange
           </button>
         </div>
 
-        {/* Items */}
         <div style={{ flex: 1, overflowY: "auto", padding: "1.5rem 2rem" }}>
           {items.length === 0 ? (
             <div style={{ textAlign: "center", paddingTop: "4rem" }}>
@@ -99,7 +97,6 @@ export default function CartDrawer({ open, onClose, items, onRemove, onQtyChange
           )}
         </div>
 
-        {/* Footer */}
         {items.length > 0 && (
           <div style={{ padding: "2rem", borderTop: "1px solid var(--border)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1.5rem" }}>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import ProductCard from "../components/ProductCard";
 import { products, categories } from "../data/products";
 import type { Product } from "../data/products";
@@ -16,6 +16,11 @@ export default function AllProductsPage({ setPage, onAddToCart, initialCategory 
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [sort, setSort] = useState<"default" | "asc" | "desc">("default");
   const [page, setLocalPage] = useState(1);
+
+  useEffect(() => {
+    setActiveCategory(initialCategory);
+    setLocalPage(1);
+  }, [initialCategory]);
 
   const filtered = useMemo(() => {
     return products

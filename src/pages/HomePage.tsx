@@ -55,9 +55,8 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
 
   return (
     <div>
-      <HeroSlider onShopNow={() => setPage("products")} />
+      <HeroSlider onSelectCategory={(cat) => nav(cat)} onShopNow={() => setPage("products")} />
 
-      {/* Shop by Category — 9 categories in asymmetric grid */}
       <section id="categories" style={{ padding: "6rem 2rem", background: "var(--bg-deep)" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <SectionLabel>Shop by Category</SectionLabel>
@@ -68,19 +67,16 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
             <GhostButton onClick={() => setPage("products")}>View All →</GhostButton>
           </div>
 
-          {/* Row 1 */}
           <div className="noir-cat-row-1" style={{ marginBottom: "0.875rem" }}>
             {(["Women's Shoes", "Bags", "Men's Shoes"] as const).map((cat) => (
               <CategoryCard key={cat} cat={cat} onClick={() => nav(cat)} />
             ))}
           </div>
-          {/* Row 2 */}
           <div className="noir-cat-row-2" style={{ marginBottom: "0.875rem" }}>
             {(["Women's Clothing", "Women's Suits", "Men's Clothing"] as const).map((cat) => (
               <CategoryCard key={cat} cat={cat} onClick={() => nav(cat)} />
             ))}
           </div>
-          {/* Row 3 */}
           <div className="noir-cat-row-3">
             {(["Men's Suits", "Jewelry", "Fragrance"] as const).map((cat) => (
               <CategoryCard key={cat} cat={cat} onClick={() => nav(cat)} />
@@ -89,7 +85,6 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
         </div>
       </section>
 
-      {/* About */}
       <section id="about" className="noir-pad-xl" style={{ maxWidth: 1400, margin: "0 auto" }}>
         <div className="noir-about-grid">
           <div>
@@ -124,7 +119,6 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
         </div>
       </section>
 
-      {/* Featured */}
       <section id="featured" style={{ padding: "4rem 2rem 6rem", background: "var(--bg-deep)" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem" }}>
@@ -140,7 +134,6 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
         </div>
       </section>
 
-      {/* The Lookbook — editorial masonry grid */}
       <section style={{ padding: "6rem 2rem", background: "var(--bg)" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2.5rem" }}>
@@ -152,29 +145,23 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
             </div>
             <GhostButton onClick={() => setPage("products")}>Shop the Look →</GhostButton>
           </div>
-          {/* Masonry-style grid */}
           <div className="noir-lookbook-grid">
-            {/* Col 1: tall */}
             <div className="noir-lookbook-tall" style={{ position: "relative", overflow: "hidden", cursor: "pointer" }}
               onClick={() => nav(lookbookImages[0].cat)}>
               <LookbookCard src={lookbookImages[0].src} label={lookbookImages[0].label} tall />
             </div>
-            {/* Col 2 top */}
             <div style={{ position: "relative", overflow: "hidden", cursor: "pointer" }}
               onClick={() => nav(lookbookImages[1].cat)}>
               <LookbookCard src={lookbookImages[1].src} label={lookbookImages[1].label} />
             </div>
-            {/* Col 3 top */}
             <div style={{ position: "relative", overflow: "hidden", cursor: "pointer" }}
               onClick={() => nav(lookbookImages[2].cat)}>
               <LookbookCard src={lookbookImages[2].src} label={lookbookImages[2].label} />
             </div>
-            {/* Col 2 bottom */}
             <div style={{ position: "relative", overflow: "hidden", cursor: "pointer" }}
               onClick={() => nav(lookbookImages[3].cat)}>
               <LookbookCard src={lookbookImages[3].src} label={lookbookImages[3].label} />
             </div>
-            {/* Col 3 bottom */}
             <div style={{ position: "relative", overflow: "hidden", cursor: "pointer" }}
               onClick={() => nav(lookbookImages[4].cat)}>
               <LookbookCard src={lookbookImages[4].src} label={lookbookImages[4].label} />
@@ -183,7 +170,6 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
         </div>
       </section>
 
-      {/* New Arrivals — horizontal scroll */}
       <section className="noir-arrivals-section">
         <div className="noir-arrivals-header">
           <div>
@@ -201,11 +187,9 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
         </div>
       </section>
 
-      {/* House of Bags — feature section */}
       <section className="noir-pad-lg" style={{ background: "var(--bg-deep)" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div className="noir-bags-split">
-            {/* Left: editorial image */}
             <div style={{ position: "relative" }}>
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, color-mix(in srgb, var(--gold) 12%, transparent) 0%, transparent 60%)", zIndex: 1, pointerEvents: "none" }} />
               <img
@@ -218,7 +202,6 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
                 <span style={{ background: "var(--gold)", color: "var(--gold-on)", fontSize: "0.6rem", letterSpacing: "0.15em", textTransform: "uppercase", padding: "0.4rem 0.9rem", fontFamily: "'Inter', sans-serif", fontWeight: 600 }}>10 Houses</span>
               </div>
             </div>
-            {/* Right: copy + 2×2 bag grid */}
             <div>
               <SectionLabel>The Bag Edit</SectionLabel>
               <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(2rem, 3vw, 3.5rem)", fontWeight: 300, color: "var(--text)", lineHeight: 1.1, marginBottom: "1rem" }}>
@@ -245,14 +228,12 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
         </div>
       </section>
 
-      {/* Limited editions */}
       <section style={{ padding: "0 2rem 6rem" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <LimitedBanner limited={limited} onAddToCart={onAddToCart} setPage={setPage} />
         </div>
       </section>
 
-      {/* Trending Now — 8-product grid */}
       <section className="noir-pad-lg" style={{ background: "var(--bg)" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2.5rem" }}>
@@ -268,7 +249,6 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
         </div>
       </section>
 
-      {/* The Runway Strip */}
       <section className="noir-pad-lg" style={{ background: "var(--bg-deep)" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2.5rem" }}>
@@ -288,7 +268,6 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
         </div>
       </section>
 
-      {/* Category spotlight row */}
       <section style={{ padding: "0 2rem 6rem", background: "var(--bg-deep)" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto", paddingTop: "5rem" }}>
           <SectionLabel>Explore More</SectionLabel>
@@ -304,7 +283,6 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
         </div>
       </section>
 
-      {/* FAQ */}
       <section id="faq" className="noir-pad-xl" style={{ background: "var(--bg)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "4rem" }}>
@@ -318,7 +296,6 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
           </div>
 
           <div className="noir-faq-grid">
-            {/* Left column */}
             <div>
               <FaqGroup label="Ordering & Payment">
                 <FaqItem q="How do I place an order?">
@@ -351,7 +328,6 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
               </FaqGroup>
             </div>
 
-            {/* Right column */}
             <div>
               <FaqGroup label="Security & Privacy">
                 <FaqItem q="Is my payment information secure?">
@@ -387,7 +363,6 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
         </div>
       </section>
 
-      {/* Contact */}
       <section id="contact" className="noir-pad-xl">
         <div style={{ maxWidth: 1400, margin: "0 auto" }} className="noir-contact-grid">
           <div>
@@ -416,7 +391,6 @@ export default function HomePage({ setPage, onAddToCart, setCategory, onViewed }
   );
 }
 
-// ── Category Card ─────────────────────────────────────────────────────────────
 function CategoryCard({ cat, onClick }: { cat: string; onClick: () => void }) {
   const [hovered, setHovered] = useState(false);
   const meta = categoryMeta[cat];
@@ -445,7 +419,6 @@ function CategoryCard({ cat, onClick }: { cat: string; onClick: () => void }) {
   );
 }
 
-// ── Spotlight Card ────────────────────────────────────────────────────────────
 function SpotlightCard({ cat, label, desc, onClick }: { cat: string; label: string; desc: string; onClick: () => void }) {
   const [hov, setHov] = useState(false);
   const meta = categoryMeta[cat];
@@ -472,14 +445,12 @@ function SpotlightCard({ cat, label, desc, onClick }: { cat: string; label: stri
   );
 }
 
-// ── Limited Banner ────────────────────────────────────────────────────────────
 function LimitedBanner({ limited, onAddToCart, setPage }: { limited: Product[]; onAddToCart: (p: Product) => void; setPage: (p: "home" | "products") => void }) {
   const [active, setActive] = useState(0);
   const current = limited[active];
   if (!current) return null;
   return (
     <div style={{ border: "1px solid var(--border)", background: "var(--bg-card)", overflow: "hidden" }}>
-      {/* Image — cinematic tall crop */}
       <div style={{ position: "relative", overflow: "hidden", background: "var(--bg-elevated)", height: "min(72vh, 680px)" }}>
         <img
           key={current.id}
@@ -488,16 +459,13 @@ function LimitedBanner({ limited, onAddToCart, setPage }: { limited: Product[]; 
           loading="lazy"
           style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top", animation: "limitedFadeIn 0.6s ease" }}
         />
-        {/* deep bottom scrim so text pops */}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, transparent 35%, rgba(0,0,0,0.72) 100%)" }} />
 
-        {/* label top-left */}
         <div style={{ position: "absolute", top: "1.75rem", left: "2rem", display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ display: "block", width: 22, height: 1, background: "var(--gold)" }} />
           <span style={{ fontSize: "0.58rem", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontWeight: 600 }}>Limited Edition</span>
         </div>
 
-        {/* slide dots top-right */}
         <div style={{ position: "absolute", top: "1.6rem", right: "2rem", display: "flex", gap: "0.4rem", alignItems: "center" }}>
           {limited.map((_, i) => (
             <button
@@ -508,7 +476,6 @@ function LimitedBanner({ limited, onAddToCart, setPage }: { limited: Product[]; 
           ))}
         </div>
 
-        {/* product info overlaid on image bottom */}
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "2rem 2rem 1.75rem", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
           <div>
             <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(1.8rem, 3.5vw, 3rem)", fontWeight: 300, color: "#f2ede6", lineHeight: 1.1, marginBottom: "0.4rem", textShadow: "0 2px 20px rgba(0,0,0,0.4)" }}>{current.name}</h2>
@@ -532,7 +499,6 @@ function LimitedBanner({ limited, onAddToCart, setPage }: { limited: Product[]; 
   );
 }
 
-// ── Contact Form ──────────────────────────────────────────────────────────────
 function ContactForm() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState("");
@@ -591,7 +557,6 @@ function ContactForm() {
   );
 }
 
-// ── Shared ────────────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: "1rem" }}>
@@ -635,7 +600,6 @@ function Footer({ setPage, nav }: { setPage: (p: "home" | "products") => void; n
             </div>
           ))}
         </div>
-        {/* Payment Section */}
         <div style={{ borderTop: "1px solid var(--border-mid)", paddingTop: "2.5rem", marginBottom: "2rem" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1.5rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
@@ -645,14 +609,12 @@ function Footer({ setPage, nav }: { setPage: (p: "home" | "products") => void; n
               <span style={{ fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", fontFamily: "'Inter', sans-serif" }}>Secure Checkout — 256-bit SSL Encryption</span>
             </div>
             <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-              {/* Visa */}
               <PayBadge>
                 <svg viewBox="0 0 60 38" width="52" height="33" style={{ display: "block" }}>
                   <rect width="60" height="38" rx="4" fill="#1a1f71"/>
                   <text x="50%" y="60%" dominantBaseline="middle" textAnchor="middle" fontFamily="'Inter',sans-serif" fontWeight="800" fontSize="18" fill="#FFFFFF" letterSpacing="-1">VISA</text>
                 </svg>
               </PayBadge>
-              {/* Mastercard */}
               <PayBadge>
                 <svg viewBox="0 0 60 38" width="52" height="33" style={{ display: "block" }}>
                   <rect width="60" height="38" rx="4" fill="#252525"/>
@@ -661,7 +623,6 @@ function Footer({ setPage, nav }: { setPage: (p: "home" | "products") => void; n
                   <path d="M30 11a10 10 0 0 1 0 16A10 10 0 0 1 30 11z" fill="#ff5f00"/>
                 </svg>
               </PayBadge>
-              {/* Amex */}
               <PayBadge>
                 <svg viewBox="0 0 60 38" width="52" height="33" style={{ display: "block" }}>
                   <rect width="60" height="38" rx="4" fill="#2e77bc"/>
@@ -669,14 +630,12 @@ function Footer({ setPage, nav }: { setPage: (p: "home" | "products") => void; n
                   <text x="50%" y="80%" dominantBaseline="middle" textAnchor="middle" fontFamily="'Inter',sans-serif" fontWeight="800" fontSize="10" fill="#FFFFFF" letterSpacing="0.5">EXPRESS</text>
                 </svg>
               </PayBadge>
-              {/* PayPal */}
               <PayBadge>
                 <svg viewBox="0 0 60 38" width="52" height="33" style={{ display: "block" }}>
                   <rect width="60" height="38" rx="4" fill="#f5f7fa"/>
                   <text x="50%" y="60%" dominantBaseline="middle" textAnchor="middle" fontFamily="'Inter',sans-serif" fontWeight="800" fontSize="13" fill="#003087" letterSpacing="-0.5">Pay<tspan fill="#009cde">Pal</tspan></text>
                 </svg>
               </PayBadge>
-              {/* Apple Pay */}
               <PayBadge>
                 <svg viewBox="0 0 60 38" width="52" height="33" style={{ display: "block" }}>
                   <rect width="60" height="38" rx="4" fill="#1c1c1e"/>
@@ -684,14 +643,12 @@ function Footer({ setPage, nav }: { setPage: (p: "home" | "products") => void; n
                   <text x="18" y="24" fontFamily="sans-serif" fontSize="16" fill="#FFFFFF"></text>
                 </svg>
               </PayBadge>
-              {/* Google Pay */}
               <PayBadge>
                 <svg viewBox="0 0 60 38" width="52" height="33" style={{ display: "block" }}>
                   <rect width="60" height="38" rx="4" fill="#f8f9fa"/>
                   <text x="50%" y="60%" dominantBaseline="middle" textAnchor="middle" fontFamily="'Inter',sans-serif" fontWeight="600" fontSize="11" fill="#5f6368" letterSpacing="-0.3">G <tspan fill="#4285f4">P</tspan><tspan fill="#ea4335">a</tspan><tspan fill="#fbbc05">y</tspan></text>
                 </svg>
               </PayBadge>
-              {/* Stripe */}
               <PayBadge>
                 <svg viewBox="0 0 60 38" width="52" height="33" style={{ display: "block" }}>
                   <rect width="60" height="38" rx="4" fill="#635bff"/>

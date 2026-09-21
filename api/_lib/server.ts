@@ -153,7 +153,6 @@ export async function sendContactMessageRequest(body: Record<string, any>, env: 
 
   const resend = new Resend(env.RESEND_API_KEY);
   
-  // Send the message to the store owner
   const result = await resend.emails.send({
     from: env.RESEND_FROM_EMAIL,
     to: env.RESEND_CONTACT_TO_EMAIL || 'Bolajidavid05@gmail.com',
@@ -166,7 +165,6 @@ export async function sendContactMessageRequest(body: Record<string, any>, env: 
     throw new Error(result.error.message);
   }
 
-  // Send a confirmation email to the user
   const confirmationResult = await resend.emails.send({
     from: env.RESEND_FROM_EMAIL,
     to: email,
@@ -179,7 +177,6 @@ export async function sendContactMessageRequest(body: Record<string, any>, env: 
 
   if (confirmationResult.error) {
     console.error('Failed to send confirmation email to user:', confirmationResult.error);
-    // We do not throw an error here to avoid failing the whole request if the confirmation email fails.
   }
 
   return { sent: true };
@@ -204,10 +201,7 @@ export async function createCheckoutSessionRequest(body: Record<string, any>, en
       if (verifiedUser.email) {
         firebaseEmail = verifiedUser.email;
       }
-    } catch (err) {
-      // Ignore token verification errors to allow fallback to guest checkout,
-      // or you could throw an error if you want to enforce strictly valid tokens.
-    }
+    } catch (err) {}
   }
 
   const requestedItems = Array.isArray(body.items) ? body.items : [];

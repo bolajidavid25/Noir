@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,600&family=Inter:wght@300;400;500;600&display=swap');
 @import 'tailwindcss';
 
-/* ── Dark theme (default) ── */
 :root {
   --bg:           #0c0b09;
   --bg-deep:      #0a0908;
@@ -17,7 +16,6 @@
   --gold-on:      #0c0b09;
 }
 
-/* ── Light theme ── */
 html.light {
   --bg:           #f7f4ef;
   --bg-deep:      #ede9e2;
@@ -53,7 +51,6 @@ html, body, #root {
 
 .font-display { font-family: 'Fraunces', serif; }
 
-/* ── Responsive grid layouts ── */
 .noir-cat-row-1   { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .875rem; }
 .noir-cat-row-2   { display: grid; grid-template-columns: 1.2fr .8fr 1.2fr; gap: .875rem; }
 .noir-cat-row-3   { display: grid; grid-template-columns: .8fr 1.4fr .8fr; gap: .875rem; }
@@ -71,24 +68,20 @@ html, body, #root {
 .noir-faq-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 0 4rem; align-items: start; }
 .noir-stats-grid  { display: grid; grid-template-columns: repeat(4,1fr); gap: 1.5rem; }
 
-/* ── Navbar ── */
 .noir-nav-links   { display: flex; gap: 2rem; align-items: center; }
 .noir-hamburger   { display: none; background: none; border: 1px solid var(--border); color: var(--text); width: 40px; height: 40px; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 .noir-mobile-menu { display: none; flex-direction: column; position: fixed; top: 72px; left: 0; right: 0; background: color-mix(in srgb, var(--bg) 96%, transparent); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); padding: 1.5rem 2rem; gap: 0; z-index: 49; }
 .noir-mobile-menu.is-open { display: flex; }
 
-/* ── Section padding ── */
 .noir-pad-xl  { padding: 8rem 2rem; }
 .noir-pad-lg  { padding: 6rem 2rem; }
 
-/* ── New Arrivals strip ── */
 .noir-arrivals-section { padding: 6rem 0 6rem 2rem; }
 .noir-arrivals-header  { max-width: 1400px; margin: 0 auto 2rem; padding-right: 2rem; display: flex; justify-content: space-between; align-items: flex-end; }
 .noir-arrivals-strip   { overflow-x: auto; display: flex; gap: 1.25rem; padding-right: 2rem; padding-bottom: 0.5rem; scrollbar-width: none; -ms-overflow-style: none; }
 .noir-arrivals-strip::-webkit-scrollbar { display: none; }
 .noir-arrivals-card    { min-width: 280px; flex-shrink: 0; }
 
-/* ── Checkout ── */
 .checkout-page { min-height: 100vh; padding: 9rem 2rem 6rem; background: var(--bg-deep); }
 .account-page { min-height: 100vh; padding: 9rem 2rem 6rem; background: var(--bg-deep); }
 .account-shell { max-width: 1200px; margin: 0 auto; }
@@ -185,7 +178,6 @@ html, body, #root {
 .checkout-totals > div { display: flex; justify-content: space-between; color: var(--text-muted); font: 300 .75rem 'Inter', sans-serif; margin-top: .9rem; }
 .checkout-totals .checkout-total { border-top: 1px solid var(--border); color: var(--text); font: 400 1.35rem 'Fraunces', serif; margin-top: 1.5rem; padding-top: 1.5rem; }
 
-/* ── Tablet (768–1023px) ── */
 @media (max-width: 1023px) {
   .noir-cat-row-1  { grid-template-columns: 1fr 1fr; }
   .noir-cat-row-2  { grid-template-columns: 1fr 1fr; }
@@ -200,7 +192,6 @@ html, body, #root {
   .checkout-grid { gap: 3rem; }
 }
 
-/* ── Mobile (≤767px) ── */
 @media (max-width: 767px) {
   .noir-nav-links  { display: none; }
   .noir-hamburger  { display: flex; }

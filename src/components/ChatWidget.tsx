@@ -60,7 +60,6 @@ export function ChatWidget() {
     <div className="fixed bottom-6 right-6 z-50">
       {isOpen ? (
         <div style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }} className="border shadow-2xl rounded-2xl w-[350px] sm:w-[400px] h-[500px] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5">
-          {/* Header */}
           <div style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border)' }} className="border-b px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-gold animate-pulse" />
@@ -71,7 +70,6 @@ export function ChatWidget() {
             </button>
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -101,7 +99,6 @@ export function ChatWidget() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
           <div style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border)' }} className="p-3 border-t">
             <form onSubmit={sendMessage} className="relative flex items-center">
               <input

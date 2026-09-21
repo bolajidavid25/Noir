@@ -23,7 +23,6 @@ export default function Navbar({ page, setPage, cartCount, onCartOpen, theme, on
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close mobile menu on page change
   useEffect(() => { setMenuOpen(false); }, [page]);
 
   const scrollTo = (id: string) => {
@@ -53,7 +52,6 @@ export default function Navbar({ page, setPage, cartCount, onCartOpen, theme, on
       <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, transition: "background 0.4s, border-color 0.4s", background: navBg, borderBottom: (scrolled || menuOpen) ? "1px solid var(--border)" : "1px solid transparent", backdropFilter: (scrolled || menuOpen) ? "blur(12px)" : "none" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto", padding: "0 2rem", height: 72, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
 
-          {/* Logo */}
           <button
             onClick={() => { setPage("home"); window.scrollTo({ top: 0, behavior: "smooth" }); setMenuOpen(false); }}
             style={{ fontFamily: "'Fraunces', serif", fontSize: "1.5rem", fontWeight: 400, letterSpacing: "0.04em", color: "var(--text)", background: "none", border: "none", cursor: "pointer", transition: "color 0.35s" }}
@@ -61,7 +59,6 @@ export default function Navbar({ page, setPage, cartCount, onCartOpen, theme, on
             NŌIR
           </button>
 
-          {/* Desktop nav links */}
           <div className="noir-nav-links">
             {navItems.map((item) => (
               <button key={item.label} onClick={item.action}
@@ -73,7 +70,6 @@ export default function Navbar({ page, setPage, cartCount, onCartOpen, theme, on
               </button>
             ))}
 
-            {/* Theme toggle */}
             <button onClick={onToggleTheme} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               style={{ position: "relative", width: 52, height: 28, borderRadius: 14, border: "1px solid var(--border)", background: theme === "light" ? "var(--gold)" : "var(--bg-elevated)", cursor: "pointer", padding: 0, transition: "background 0.3s", flexShrink: 0 }}
             >
@@ -88,7 +84,6 @@ export default function Navbar({ page, setPage, cartCount, onCartOpen, theme, on
               {user ? getFirstName(user) : "Sign in"}
             </button>
 
-            {/* Cart */}
             <button onClick={onCartOpen}
               style={{ position: "relative", background: "none", border: "1px solid var(--border)", borderRadius: 2, color: "var(--text)", padding: "8px 16px", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, transition: "border-color 0.2s, color 0.2s", fontFamily: "'Inter', sans-serif" }}
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--gold)"; e.currentTarget.style.color = "var(--gold)"; }}
@@ -104,9 +99,7 @@ export default function Navbar({ page, setPage, cartCount, onCartOpen, theme, on
             </button>
           </div>
 
-          {/* Mobile right: cart icon + hamburger */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            {/* Mobile cart */}
             <button onClick={onCartOpen} className="noir-hamburger" style={{ position: "relative" }}>
               <CartIcon />
               {cartCount > 0 && (
@@ -116,7 +109,6 @@ export default function Navbar({ page, setPage, cartCount, onCartOpen, theme, on
               )}
             </button>
 
-            {/* Hamburger button */}
             <button
               className="noir-hamburger"
               onClick={() => setMenuOpen((o) => !o)}
@@ -136,7 +128,6 @@ export default function Navbar({ page, setPage, cartCount, onCartOpen, theme, on
         </div>
       </nav>
 
-      {/* Mobile dropdown menu */}
       <div className={`noir-mobile-menu${menuOpen ? " is-open" : ""}`} style={{ background: "color-mix(in srgb, var(--bg) 96%, transparent)" }}>
         {navItems.map((item) => (
           <button key={item.label} onClick={item.action}
@@ -147,7 +138,6 @@ export default function Navbar({ page, setPage, cartCount, onCartOpen, theme, on
             {item.label}
           </button>
         ))}
-        {/* Theme + cart row */}
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", paddingTop: "1rem" }}>
           <button onClick={onAccountOpen} style={{ background: "none", border: "1px solid var(--border)", color: "var(--text)", padding: "0.65rem 1rem", fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>
             {user ? getFirstName(user) : "Sign in / Create account"}

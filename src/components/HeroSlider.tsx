@@ -4,7 +4,8 @@ import chanelVideo from "../imports/chanel_allure_homme_sport.mp4";
 import drMartensVideo from "../imports/Dr.Martens.mp4";
 
 interface HeroSliderProps {
-  onShopNow: () => void;
+  onShopNow?: () => void;
+  onSelectCategory?: (category: string) => void;
 }
 
 const slides = [
@@ -16,6 +17,7 @@ const slides = [
     subline: "Ultra-rare fragrance collections — 20 houses, each a masterpiece of perfumery.",
     cta: "Explore Fragrance",
     accent: "Fragrance Edit",
+    category: "Fragrance",
   },
   {
     id: 2,
@@ -25,19 +27,21 @@ const slides = [
     subline: "Chelsea boots, Oxfords, and every silhouette in between — 100 styles of men's luxury.",
     cta: "Shop Men's Shoes",
     accent: "Men's Shoes",
+    category: "Men's Shoes",
   },
   {
     id: 3,
     video: blackDressVideo,
     poster: "https://images.unsplash.com/photo-1732706431123-1aac2b46ace6?w=1400&h=900&fit=crop&auto=format",
-    headline: "Wear\nthe Night",
+    headline: "Women's\nGowns",
     subline: "Evening capsule — limited to 200 pieces worldwide.",
-    cta: "View Capsule",
+    cta: "Women's Clothing",
     accent: "Women's Drop",
+    category: "Women's Clothing",
   },
 ];
 
-export default function HeroSlider({ onShopNow }: HeroSliderProps) {
+export default function HeroSlider({ onShopNow, onSelectCategory }: HeroSliderProps) {
   const [current, setCurrent] = useState(0);
   const [prev, setPrev] = useState<number | null>(null);
   const [animating, setAnimating] = useState(false);
@@ -110,14 +114,12 @@ export default function HeroSlider({ onShopNow }: HeroSliderProps) {
             >
               <source src={slide.video} type="video/mp4" />
             </video>
-            {/* Overlay gradients */}
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(0,0,0,0.82) 30%, rgba(0,0,0,0.2) 100%)" }} />
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)" }} />
           </div>
         );
       })}
 
-      {/* Content */}
       <div style={{ position: "relative", zIndex: 10, height: "100%", maxWidth: 1400, margin: "0 auto", padding: "0 2rem", display: "flex", flexDirection: "column", justifyContent: "center" }}>
         <div style={{ maxWidth: 560 }}>
           <div key={`accent-${current}`} style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: "1.5rem", animation: "fadeSlideUp 0.6s 0.1s both" }}>
@@ -148,25 +150,23 @@ export default function HeroSlider({ onShopNow }: HeroSliderProps) {
 
           <div key={`cta-${current}`} style={{ display: "flex", gap: "1rem", animation: "fadeSlideUp 0.7s 0.45s both" }}>
             <button
-              onClick={onShopNow}
+              onClick={() => {
+                if (onSelectCategory) {
+                  onSelectCategory(slides[current].category);
+                } else if (onShopNow) {
+                  onShopNow();
+                }
+              }}
               style={{ background: "#b8965a", color: "#0c0b09", border: "none", padding: "1rem 2.5rem", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif", transition: "opacity 0.2s, transform 0.2s" }}
               onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; e.currentTarget.style.transform = "translateY(-1px)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
             >
               {slides[current].cta}
             </button>
-            <button
-              style={{ background: "none", color: "#f2ede6", border: "1px solid rgba(242,237,230,0.35)", padding: "1rem 2rem", fontSize: "0.7rem", letterSpacing: "0.15em", textTransform: "uppercase", cursor: "pointer", fontFamily: "'Inter', sans-serif", transition: "border-color 0.2s" }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#f2ede6"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(242,237,230,0.35)"; }}
-            >
-              Lookbook
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Slide controls */}
       <div style={{ position: "absolute", bottom: "2.5rem", left: 0, right: 0, zIndex: 20, maxWidth: 1400, margin: "0 auto", padding: "0 2rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
           {slides.map((_, i) => (

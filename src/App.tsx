@@ -33,9 +33,7 @@ export default function App() {
         name: result.user.displayName || "",
         email: result.user.email || "",
       }, { merge: true });
-    }).catch(() => {
-      // The auth-state listener still handles an established Firebase session.
-    });
+    }).catch(() => {});
     return () => { active = false; };
   }, []);
 
@@ -87,9 +85,7 @@ export default function App() {
     if (!user) return;
     try {
       await setDoc(doc(db, "users", user.uid), { viewedItems: arrayUnion(product) }, { merge: true });
-    } catch {
-      // The product remains usable even if history cannot be updated.
-    }
+    } catch {}
   };
 
   const removeFromCart = (id: number) => setCartItems((prev) => prev.filter((i) => i.product.id !== id));

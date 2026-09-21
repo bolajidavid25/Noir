@@ -34,18 +34,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Invalid messages format.' });
     }
 
-    // Convert generic message history to Gemini format
     let rawHistory = messages.slice(0, -1).map((msg: any) => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }],
     }));
 
-    // Filter out our own error fallback messages to prevent poisoning the history
     rawHistory = rawHistory.filter((msg: any) => 
       !msg.parts[0].text.includes('I apologize, but I am currently unavailable')
     );
 
-    // Gemini requires history to start with 'user' and strictly alternate.
     const strictHistory: any[] = [];
     for (const msg of rawHistory) {
       if (strictHistory.length === 0) {
@@ -61,7 +58,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let currentMessage = messages[messages.length - 1].content;
     
-    // The history must end with 'model' before we send a new 'user' message via sendMessage
     if (strictHistory.length > 0 && strictHistory[strictHistory.length - 1].role === 'user') {
       const popped = strictHistory.pop();
       currentMessage = popped.parts[0].text + '\n\n' + currentMessage;

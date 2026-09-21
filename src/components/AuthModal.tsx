@@ -22,9 +22,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
         ...profile,
         updatedAt: serverTimestamp(),
       }, { merge: true });
-    } catch {
-      // Authentication should still succeed if profile persistence is unavailable.
-    }
+    } catch {}
   };
 
   if (!open) return null;
@@ -40,13 +38,10 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
         await updateProfile(credential.user, { displayName: name });
         await saveProfile(credential.user.uid, { name, email });
         
-        // Import sendEmailVerification from firebase/auth at the top of the file if not already there, 
-        // but since we can't reliably do that without seeing the top, we'll use auth.currentUser
         const { sendEmailVerification } = await import("firebase/auth");
         await sendEmailVerification(credential.user);
         
         setError("Account created! A verification link has been sent to your email. Please verify your email before proceeding.");
-        // We log them out immediately so they are forced to verify before actually using the app
         auth.signOut();
         setMode("login");
       } else {
