@@ -22,7 +22,9 @@ import {
 } from "firebase-admin/firestore";
 import { products } from "./src/data/products";
 
-const siteConfiguration: FigmaSiteConfiguration = {};
+const siteConfiguration: FigmaSiteConfiguration = {
+  title: "Noir Fashion Store",
+};
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -615,7 +617,7 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
     return html.replace(`<!-- ${slotName} -->`, content);
   }
 
-  const title = config.title ?? "Figma Make App";
+  const title = config.title ?? "Noir Fashion Store";
   const description = config.description ?? "";
   const favicon = config.icons?.icon ?? "";
   const socialImage = config.openGraph?.image ?? "";
